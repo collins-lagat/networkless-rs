@@ -4,11 +4,14 @@ use anyhow::{Result, bail};
 use log::LevelFilter;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
 
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<()> {
     if let Err(e) = setup_logging() {
         eprintln!("Failed to initialize logging: {}", e);
         std::process::exit(1);
     }
+
+    Ok(())
 }
 
 fn setup_logging() -> Result<()> {
