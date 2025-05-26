@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.98"
+fs2 = "0.4.3"
 futures = "0.3.31"
 log = "0.4.27"
 simplelog = "0.12.2"
