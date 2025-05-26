@@ -1,8 +1,16 @@
+mod app;
+mod event;
+
 use std::{fs::File, path::Path};
 
 use anyhow::{Result, bail};
+use event::Event;
 use fs2::FileExt;
 use log::{LevelFilter, info};
+use signal_hook::{
+    consts::{SIGINT, SIGTERM},
+    iterator::Signals,
+};
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
 
 #[tokio::main(flavor = "current_thread")]
@@ -18,6 +26,46 @@ async fn main() -> Result<()> {
     }
 
     info!("Lock acquired");
+
+    let mut app = app::App::default();
+
+    let mut signals = Signals::new([SIGINT, SIGTERM])?;
+
+    let signal_tx = app.events.sender();
+    tokio::spawn(async move {
+        for signal in signals.forever() {
+            info!("Received signal {:?}", signal);
+            signal_tx.send(Event::Shutdown).unwrap();
+        }
+    });
+
+    app.events.send(Event::Init).await;
+
+    loop {
+        match app.events.next().await {
+            Some(event) => match event {
+                Event::Init => {
+                    info!("Initializing");
+                }
+                Event::WifiEnabled(enabled) => {
+                    info!("Wifi enabled: {}", enabled);
+                    app.wifi_enabled = enabled;
+                }
+                Event::AirplaneMode(enabled) => {
+                    info!("Airplane mode: {}", enabled);
+                    app.airplane_mode = enabled;
+                }
+                Event::Shutdown => {
+                    info!("Shutting down");
+                    break;
+                }
+            },
+            None => {
+                info!("No event");
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+        }
+    }
 
     Ok(())
 }
