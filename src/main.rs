@@ -1,16 +1,21 @@
 mod app;
+mod dbus;
 mod event;
+mod icon;
 
 use std::{fs::File, path::Path};
 
 use anyhow::{Result, bail};
 use event::Event;
 use fs2::FileExt;
-use log::{LevelFilter, info};
-use signal_hook::{
-    consts::{SIGINT, SIGTERM},
-    iterator::Signals,
+use futures::{
+    SinkExt, StreamExt,
+    channel::mpsc::{Sender, channel},
 };
+use icon::TrayIcon;
+use log::{LevelFilter, info};
+use signal_hook::consts::{SIGINT, SIGTERM};
+use signal_hook_tokio::Signals;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
 
 #[tokio::main(flavor = "current_thread")]
@@ -27,33 +32,31 @@ async fn main() -> Result<()> {
 
     info!("Lock acquired");
 
-    let mut app = app::App::default();
+    let (mut tx, mut rx) = channel::<Event>(32);
 
-    let mut signals = Signals::new([SIGINT, SIGTERM])?;
+    let signals = Signals::new([SIGINT, SIGTERM]).unwrap();
 
-    let signal_tx = app.events.sender();
-    tokio::spawn(async move {
-        for signal in signals.forever() {
-            info!("Received signal {:?}", signal);
-            signal_tx.send(Event::Shutdown).unwrap();
-        }
-    });
+    let handle = signals.handle();
 
-    app.events.send(Event::Init).await;
+    let signals_task = tokio::spawn(handle_signals(signals, tx.clone()));
+
+    let mut tray_icon = TrayIcon::new();
+
+    tx.send(Event::Init).await?;
 
     loop {
-        match app.events.next().await {
+        match rx.next().await {
             Some(event) => match event {
                 Event::Init => {
                     info!("Initializing");
                 }
                 Event::WifiEnabled(enabled) => {
                     info!("Wifi enabled: {}", enabled);
-                    app.wifi_enabled = enabled;
+                    tray_icon.send(event).await;
                 }
                 Event::AirplaneMode(enabled) => {
                     info!("Airplane mode: {}", enabled);
-                    app.airplane_mode = enabled;
+                    tray_icon.send(event).await;
                 }
                 Event::Shutdown => {
                     info!("Shutting down");
@@ -67,7 +70,22 @@ async fn main() -> Result<()> {
         }
     }
 
+    handle.close();
+    signals_task.await?;
+
     Ok(())
+}
+
+async fn handle_signals(mut signals: Signals, mut tx: Sender<Event>) {
+    while let Some(signal) = signals.next().await {
+        match signal {
+            SIGTERM | SIGINT => {
+                info!("Received signal {}", signal);
+                let _ = tx.send(Event::Shutdown).await;
+            }
+            _ => unreachable!(),
+        }
+    }
 }
 
 fn setup_logging() -> Result<()> {
