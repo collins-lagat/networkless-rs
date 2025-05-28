@@ -2,11 +2,11 @@ use anyhow::{Result, bail};
 use tokio::process::Command;
 use zbus::{Connection, Result as ZbusResult};
 
-use crate::dbus::NetworkManagerProxy;
+use crate::dbus::{ActiveConnectionProxy, DeviceProxy, NetworkManagerProxy};
 
 #[derive(Debug, Clone)]
 pub struct NetworkManager {
-    nm: NetworkManagerProxy<'static>,
+    pub nm: NetworkManagerProxy<'static>,
 }
 
 impl NetworkManager {
@@ -50,6 +50,56 @@ impl NetworkManager {
         let bluetooth_enabled = self.bluetooth_enabled().await?;
 
         Ok(wifi_enabled && bluetooth_enabled)
+    }
+
+    pub async fn active_connection(&self) -> Result<ActiveConnection> {
+        let active_connections = self.nm.primary_connection().await?;
+        Ok(ActiveConnection::new(active_connections).await.unwrap())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ActiveConnection {
+    pub connection: ActiveConnectionProxy<'static>,
+}
+
+impl ActiveConnection {
+    pub async fn new(path: zbus::zvariant::OwnedObjectPath) -> Result<Self> {
+        let connection = Connection::system().await?;
+        let active_connection = ActiveConnectionProxy::new(&connection, path).await?;
+
+        Ok(Self {
+            connection: active_connection,
+        })
+    }
+
+    pub async fn devices(&self) -> ZbusResult<Vec<Device>> {
+        let mut devices = vec![];
+
+        for device_path in self.connection.devices().await? {
+            let device = Device::new(device_path).await.unwrap();
+            devices.push(device);
+        }
+
+        Ok(devices)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Device {
+    pub device: DeviceProxy<'static>,
+}
+
+impl Device {
+    pub async fn new(path: zbus::zvariant::OwnedObjectPath) -> Result<Self> {
+        let connection = Connection::system().await?;
+        let device = DeviceProxy::new(&connection, path).await?;
+
+        Ok(Self { device })
+    }
+
+    pub async fn device_type(&self) -> ZbusResult<DeviceType> {
+        self.device.device_type().await.map(DeviceType::from)
     }
 }
 
@@ -101,6 +151,34 @@ impl From<u32> for Connectivity {
             3 => Connectivity::Loss,
             4 => Connectivity::Full,
             _ => Connectivity::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum DeviceType {
+    Ethernet,
+    Wifi,
+    Bluetooth,
+    TunTap,
+    WireGuard,
+    Generic,
+    Other,
+    #[default]
+    Unknown,
+}
+
+impl From<u32> for DeviceType {
+    fn from(device_type: u32) -> DeviceType {
+        match device_type {
+            1 => DeviceType::Ethernet,
+            2 => DeviceType::Wifi,
+            5 => DeviceType::Bluetooth,
+            14 => DeviceType::Generic,
+            16 => DeviceType::TunTap,
+            29 => DeviceType::WireGuard,
+            3..=32 => DeviceType::Other,
+            _ => DeviceType::Unknown,
         }
     }
 }

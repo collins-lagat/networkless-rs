@@ -16,7 +16,7 @@ use futures::{
 };
 use icon::TrayIcon;
 use log::{LevelFilter, error, info};
-use nm::{Connectivity, NetworkManager, State as NmState};
+use nm::{Connectivity, DeviceType, NetworkManager, State as NmState};
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook_tokio::Signals;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
@@ -72,7 +72,26 @@ async fn main() -> Result<()> {
                 NmState::Connecting | NmState::Disconnecting => Event::Busy,
                 NmState::ConnectedGlobal | NmState::ConnectedSite | NmState::ConnectedLocal => {
                     match _nm.connectivity().await.unwrap() {
-                        Connectivity::Full => Event::Wifi(100),
+                        Connectivity::Full => {
+                            let connection = _nm.active_connection().await.unwrap();
+
+                            let device_type = connection
+                                .devices()
+                                .await
+                                .unwrap()
+                                .first()
+                                .unwrap()
+                                .device_type()
+                                .await
+                                .unwrap();
+
+                            match device_type {
+                                DeviceType::Wifi => Event::Wifi(100),
+                                DeviceType::TunTap => Event::Vpn,
+                                DeviceType::Ethernet => Event::Ethernet,
+                                _ => Event::Unknown,
+                            }
+                        }
                         Connectivity::Loss => Event::Limited,
                         _ => Event::Limited,
                     }
@@ -100,8 +119,10 @@ async fn main() -> Result<()> {
                     Event::Disconnected => {}
                     Event::AirplaneMode => {}
                     Event::Limited => {}
-                    Event::VPN => {}
-                    Event::Ethernet => {}
+                    Event::Vpn => {}
+                    Event::Ethernet => {
+                        info!("Ethernet");
+                    }
                     Event::Wifi(strength) => {
                         info!("Wifi strength: {}", strength);
                     }

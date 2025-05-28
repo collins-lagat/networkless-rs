@@ -14,7 +14,7 @@ pub enum Event {
     Disconnected,
     AirplaneMode,
     Limited,
-    VPN,
+    Vpn,
     Ethernet,
     Wifi(u32),
 

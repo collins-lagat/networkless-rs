@@ -3,7 +3,6 @@ use std::thread;
 use anyhow::{Context, Result, bail};
 use futures::StreamExt;
 use futures::channel::mpsc::{UnboundedSender, unbounded};
-use gtk::glib::ControlFlow;
 use log::error;
 use tray_icon::{Icon, TrayIconBuilder, menu::Menu};
 
@@ -66,7 +65,7 @@ impl TrayIcon {
                                 error!("Failed to set icon");
                             };
                         }
-                        Event::VPN => {
+                        Event::Vpn => {
                             if set_icon(&tray_icon, ICON_BYTES).is_err() {
                                 error!("Failed to set icon");
                             };
