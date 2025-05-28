@@ -2,10 +2,12 @@ mod app;
 mod dbus;
 mod event;
 mod icon;
+mod nm;
 
 use std::{fs::File, path::Path};
 
 use anyhow::{Result, bail};
+use app::App;
 use event::Event;
 use fs2::FileExt;
 use futures::{
@@ -13,7 +15,8 @@ use futures::{
     channel::mpsc::{Sender, channel},
 };
 use icon::TrayIcon;
-use log::{LevelFilter, info};
+use log::{LevelFilter, error, info};
+use nm::{NetworkManager, State as NmState};
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook_tokio::Signals;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
@@ -42,27 +45,63 @@ async fn main() -> Result<()> {
 
     let mut tray_icon = TrayIcon::new();
 
-    tx.send(Event::Init).await?;
+    let nm = NetworkManager::new().await?;
+
+    let app = App::new(&nm).await;
+
+    let _nm = nm.clone();
+    tokio::spawn(async move {
+        loop {
+            let state = match _nm.state().await {
+                Ok(state) => state,
+                Err(e) => {
+                    error!("Failed to get state: {}", e);
+                    continue;
+                }
+            };
+
+            let event = match state {
+                NmState::Asleep => Event::Off,
+                NmState::Disconnected => Event::Disconnected,
+                NmState::Disconnecting => Event::Disconnecting,
+                NmState::Connecting => Event::Connecting,
+                NmState::ConnectedGlobal | NmState::ConnectedSite | NmState::ConnectedLocal => {
+                    Event::Wifi(0)
+                }
+                NmState::Unknown => Event::Unknown,
+            };
+
+            if let Err(e) = tx.send(event).await {
+                error!("Failed to send event: {}", e);
+            }
+
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        }
+    });
 
     loop {
         match rx.next().await {
-            Some(event) => match event {
-                Event::Init => {
-                    info!("Initializing");
+            Some(event) => {
+                let _event = event.clone();
+                tray_icon.send(_event).await;
+                match event {
+                    Event::Unknown => {}
+                    Event::Off => {}
+                    Event::Connecting | Event::Disconnecting => {}
+                    Event::Disconnected => {}
+                    Event::AirplaneMode => {}
+                    Event::Limited => {}
+                    Event::VPN => {}
+                    Event::Ethernet => {}
+                    Event::Wifi(strength) => {
+                        info!("Wifi strength: {}", strength);
+                    }
+                    Event::Shutdown => {
+                        info!("Shutting down");
+                        break;
+                    }
                 }
-                Event::WifiEnabled(enabled) => {
-                    info!("Wifi enabled: {}", enabled);
-                    tray_icon.send(event).await;
-                }
-                Event::AirplaneMode(enabled) => {
-                    info!("Airplane mode: {}", enabled);
-                    tray_icon.send(event).await;
-                }
-                Event::Shutdown => {
-                    info!("Shutting down");
-                    break;
-                }
-            },
+            }
             None => {
                 info!("No event");
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;

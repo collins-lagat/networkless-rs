@@ -15,3 +15,4 @@ signal-hook-tokio = { version = "0.3.1", features = ["futures-v0_3"] }
 simplelog = "0.12.2"
 tokio = { version = "1.45.0", features = ["rt", "macros", "sync", "time"] }
 tray-icon = "0.20.1"
+zbus = { version = "5.7.1", default-features = false, features = ["tokio"] }

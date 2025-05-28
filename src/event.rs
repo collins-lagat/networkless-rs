@@ -8,9 +8,17 @@
 
 #[derive(Debug, Clone)]
 pub enum Event {
-    Init,
-    WifiEnabled(bool),
-    AirplaneMode(bool),
+    Unknown,
+    Off,
+    Connecting,
+    Disconnecting,
+    Disconnected,
+    AirplaneMode,
+    Limited,
+    VPN,
+    Ethernet,
+    Wifi(u32),
+
     Shutdown,
 }
 
