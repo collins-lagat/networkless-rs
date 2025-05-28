@@ -46,7 +46,7 @@ impl TrayIcon {
                                 error!("Failed to set icon");
                             };
                         }
-                        Event::Connecting | Event::Disconnecting => {
+                        Event::Busy => {
                             if set_icon(&tray_icon, ICON_BYTES).is_err() {
                                 error!("Failed to set icon");
                             };

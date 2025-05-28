@@ -10,8 +10,7 @@
 pub enum Event {
     Unknown,
     Off,
-    Connecting,
-    Disconnecting,
+    Busy,
     Disconnected,
     AirplaneMode,
     Limited,

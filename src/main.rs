@@ -63,8 +63,7 @@ async fn main() -> Result<()> {
             let event = match state {
                 NmState::Asleep => Event::Off,
                 NmState::Disconnected => Event::Disconnected,
-                NmState::Disconnecting => Event::Disconnecting,
-                NmState::Connecting => Event::Connecting,
+                NmState::Connecting | NmState::Disconnecting => Event::Busy,
                 NmState::ConnectedGlobal | NmState::ConnectedSite | NmState::ConnectedLocal => {
                     Event::Wifi(0)
                 }
@@ -87,7 +86,7 @@ async fn main() -> Result<()> {
                 match event {
                     Event::Unknown => {}
                     Event::Off => {}
-                    Event::Connecting | Event::Disconnecting => {}
+                    Event::Busy => {}
                     Event::Disconnected => {}
                     Event::AirplaneMode => {}
                     Event::Limited => {}
