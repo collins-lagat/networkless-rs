@@ -1,4 +1,3 @@
-mod app;
 mod dbus;
 mod event;
 mod icon;
@@ -7,7 +6,6 @@ mod nm;
 use std::{fs::File, path::Path};
 
 use anyhow::{Result, bail};
-use app::App;
 use event::Event;
 use fs2::FileExt;
 use futures::{
@@ -46,8 +44,6 @@ async fn main() -> Result<()> {
     let mut tray_icon = TrayIcon::new();
 
     let nm = NetworkManager::new().await?;
-
-    let app = App::new(&nm).await;
 
     let _nm = nm.clone();
     tokio::spawn(async move {
