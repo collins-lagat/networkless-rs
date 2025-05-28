@@ -16,7 +16,7 @@ use futures::{
 };
 use icon::TrayIcon;
 use log::{LevelFilter, error, info};
-use nm::{NetworkManager, State as NmState};
+use nm::{Connectivity, NetworkManager, State as NmState};
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook_tokio::Signals;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
@@ -71,7 +71,11 @@ async fn main() -> Result<()> {
                 }
                 NmState::Connecting | NmState::Disconnecting => Event::Busy,
                 NmState::ConnectedGlobal | NmState::ConnectedSite | NmState::ConnectedLocal => {
-                    Event::Wifi(0)
+                    match _nm.connectivity().await.unwrap() {
+                        Connectivity::Full => Event::Wifi(100),
+                        Connectivity::Loss => Event::Limited,
+                        _ => Event::Limited,
+                    }
                 }
                 NmState::Unknown => Event::Unknown,
             };
