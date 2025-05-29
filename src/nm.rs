@@ -49,7 +49,11 @@ impl NetworkManager {
         let wifi_enabled = self.wifi_enabled().await?;
         let bluetooth_enabled = self.bluetooth_enabled().await?;
 
-        Ok(wifi_enabled && bluetooth_enabled)
+        if !wifi_enabled && !bluetooth_enabled {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 
     pub async fn active_connection(&self) -> Result<ActiveConnection> {
