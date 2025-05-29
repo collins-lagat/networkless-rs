@@ -8,7 +8,19 @@ use tray_icon::{Icon, TrayIconBuilder, menu::Menu};
 
 use crate::event::Event;
 
-const ICON_BYTES: &[u8] = include_bytes!("../assets/checking.png");
+const AIRPLANE_MODE_BYTES: &[u8] = include_bytes!("../assets/airplane_mode.png");
+const BUSY_BYTES: &[u8] = include_bytes!("../assets/busy.png");
+const DISCONNECTED_BYTES: &[u8] = include_bytes!("../assets/disconnected.png");
+const ETHERNET_BYTES: &[u8] = include_bytes!("../assets/ethernet.png");
+const LIMITED_BYTES: &[u8] = include_bytes!("../assets/limited.png");
+const UNKNOWN_BYTES: &[u8] = include_bytes!("../assets/unknown.png");
+const VPN_BYTES: &[u8] = include_bytes!("../assets/vpn.png");
+const WIFI_OFF_BYTES: &[u8] = include_bytes!("../assets/wifi-off.png");
+const WIFI_100_BYTES: &[u8] = include_bytes!("../assets/wifi-100.png");
+const WIFI_75_BYTES: &[u8] = include_bytes!("../assets/wifi-75.png");
+const WIFI_50_BYTES: &[u8] = include_bytes!("../assets/wifi-50.png");
+const WIFI_25_BYTES: &[u8] = include_bytes!("../assets/wifi-25.png");
+const WIFI_0_BYTES: &[u8] = include_bytes!("../assets/wifi-0.png");
 
 pub struct TrayIcon {
     tx: UnboundedSender<Event>,
@@ -36,51 +48,56 @@ impl TrayIcon {
                 while let Some(event) = rx.next().await {
                     match event {
                         Event::Unknown => {
-                            if set_icon(&tray_icon, ICON_BYTES).is_err() {
+                            if set_icon(&tray_icon, UNKNOWN_BYTES).is_err() {
                                 error!("Failed to set icon");
                             };
                         }
                         Event::Off => {
-                            if set_icon(&tray_icon, ICON_BYTES).is_err() {
+                            if set_icon(&tray_icon, WIFI_OFF_BYTES).is_err() {
                                 error!("Failed to set icon");
                             };
                         }
                         Event::Busy => {
-                            if set_icon(&tray_icon, ICON_BYTES).is_err() {
+                            if set_icon(&tray_icon, BUSY_BYTES).is_err() {
                                 error!("Failed to set icon");
                             };
                         }
                         Event::Disconnected => {
-                            if set_icon(&tray_icon, ICON_BYTES).is_err() {
+                            if set_icon(&tray_icon, DISCONNECTED_BYTES).is_err() {
                                 error!("Failed to set icon");
                             };
                         }
                         Event::AirplaneMode => {
-                            if set_icon(&tray_icon, ICON_BYTES).is_err() {
+                            if set_icon(&tray_icon, AIRPLANE_MODE_BYTES).is_err() {
                                 error!("Failed to set icon");
                             };
                         }
                         Event::Limited => {
-                            if set_icon(&tray_icon, ICON_BYTES).is_err() {
+                            if set_icon(&tray_icon, LIMITED_BYTES).is_err() {
                                 error!("Failed to set icon");
                             };
                         }
                         Event::Vpn => {
-                            if set_icon(&tray_icon, ICON_BYTES).is_err() {
+                            if set_icon(&tray_icon, VPN_BYTES).is_err() {
                                 error!("Failed to set icon");
                             };
                         }
                         Event::Ethernet => {
-                            if set_icon(&tray_icon, ICON_BYTES).is_err() {
+                            if set_icon(&tray_icon, ETHERNET_BYTES).is_err() {
                                 error!("Failed to set icon");
                             };
                         }
                         Event::Wifi(strength) => {
-                            if strength < 30 && set_icon(&tray_icon, ICON_BYTES).is_err() {
-                                error!("Failed to set icon");
-                            } else if strength < 50 && set_icon(&tray_icon, ICON_BYTES).is_err() {
-                                error!("Failed to set icon");
-                            } else if set_icon(&tray_icon, ICON_BYTES).is_err() {
+                            let icon = match strength {
+                                0 => WIFI_0_BYTES,
+                                1..=24 => WIFI_25_BYTES,
+                                25..=49 => WIFI_50_BYTES,
+                                50..=74 => WIFI_75_BYTES,
+                                75..=100 => WIFI_100_BYTES,
+                                _ => WIFI_100_BYTES,
+                            };
+
+                            if set_icon(&tray_icon, icon).is_err() {
                                 error!("Failed to set icon");
                             }
                         }
