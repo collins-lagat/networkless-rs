@@ -1,5 +1,5 @@
 [package]
-name = "networkless"
+name = "networkless-rs"
 version = "0.1.7"
 edition = "2024"
 

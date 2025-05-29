@@ -1174,7 +1174,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "networkless"
+name = "networkless-rs"
 version = "0.1.7"
 dependencies = [
  "anyhow",
