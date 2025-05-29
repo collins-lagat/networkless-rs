@@ -108,24 +108,8 @@ async fn main() -> Result<()> {
             Some(event) => {
                 let _event = event.clone();
                 tray_icon.send(_event).await;
-                match event {
-                    Event::Unknown => {}
-                    Event::Off => {}
-                    Event::Busy => {}
-                    Event::Disconnected => {}
-                    Event::AirplaneMode => {}
-                    Event::Limited => {}
-                    Event::Vpn => {}
-                    Event::Ethernet => {
-                        info!("Ethernet");
-                    }
-                    Event::Wifi(strength) => {
-                        info!("Wifi strength: {}", strength);
-                    }
-                    Event::Shutdown => {
-                        info!("Shutting down");
-                        break;
-                    }
+                if let Event::Shutdown = event {
+                    break;
                 }
             }
             None => {
