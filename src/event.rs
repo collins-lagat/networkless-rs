@@ -6,7 +6,7 @@
 //     iterator::Signals,
 // };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
     Unknown,
     Off,

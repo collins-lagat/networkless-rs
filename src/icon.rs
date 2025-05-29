@@ -28,7 +28,7 @@ pub struct TrayIcon {
 
 impl TrayIcon {
     pub fn new() -> Self {
-        let (tx, mut rx) = unbounded();
+        let (tx, mut rx) = unbounded::<Event>();
 
         let _tx = tx.clone();
         thread::spawn(move || {
@@ -45,7 +45,15 @@ impl TrayIcon {
 
             let ctx = gtk::glib::MainContext::default();
             ctx.spawn_local(async move {
+                let mut current_event: Option<Event> = None;
+
                 while let Some(event) = rx.next().await {
+                    if current_event == Some(event.clone()) {
+                        continue;
+                    }
+
+                    current_event = Some(event.clone());
+
                     match event {
                         Event::Unknown => {
                             if set_icon(&tray_icon, UNKNOWN_BYTES).is_err() {
