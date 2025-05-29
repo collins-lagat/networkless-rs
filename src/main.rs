@@ -99,7 +99,7 @@ async fn main() -> Result<()> {
                 error!("Failed to send event: {}", e);
             }
 
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         }
     });
 
