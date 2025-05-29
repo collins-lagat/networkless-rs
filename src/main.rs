@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
             };
 
             let event = match state {
-                NmState::Asleep => Event::Off,
+                NmState::Asleep | NmState::ConnectedLocal | NmState::ConnectedSite => Event::Off,
                 NmState::Disconnected => {
                     if _nm.airplane_mode_enabled().await.unwrap() {
                         Event::AirplaneMode
@@ -66,32 +66,30 @@ async fn main() -> Result<()> {
                     }
                 }
                 NmState::Connecting | NmState::Disconnecting => Event::Busy,
-                NmState::ConnectedGlobal | NmState::ConnectedSite | NmState::ConnectedLocal => {
-                    match _nm.connectivity().await.unwrap() {
-                        Connectivity::Full => {
-                            let connection = _nm.active_connection().await.unwrap();
+                NmState::ConnectedGlobal => match _nm.connectivity().await.unwrap() {
+                    Connectivity::Full => {
+                        let connection = _nm.active_connection().await.unwrap();
 
-                            let device_type = connection
-                                .devices()
-                                .await
-                                .unwrap()
-                                .first()
-                                .unwrap()
-                                .device_type()
-                                .await
-                                .unwrap();
+                        let device_type = connection
+                            .devices()
+                            .await
+                            .unwrap()
+                            .first()
+                            .unwrap()
+                            .device_type()
+                            .await
+                            .unwrap();
 
-                            match device_type {
-                                DeviceType::Wifi => Event::Wifi(100),
-                                DeviceType::TunTap => Event::Vpn,
-                                DeviceType::Ethernet => Event::Ethernet,
-                                _ => Event::Unknown,
-                            }
+                        match device_type {
+                            DeviceType::Wifi => Event::Wifi(100),
+                            DeviceType::TunTap => Event::Vpn,
+                            DeviceType::Ethernet => Event::Ethernet,
+                            _ => Event::Unknown,
                         }
-                        Connectivity::Loss => Event::Limited,
-                        _ => Event::Limited,
                     }
-                }
+                    Connectivity::Loss => Event::Limited,
+                    _ => Event::Limited,
+                },
                 NmState::Unknown => Event::Unknown,
             };
 
