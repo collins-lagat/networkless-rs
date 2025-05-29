@@ -35,7 +35,11 @@ impl TrayIcon {
             gtk::init().unwrap();
             let menu = Menu::new();
 
-            let tray_icon = match TrayIconBuilder::new().with_menu(Box::new(menu)).build() {
+            let tray_icon = match TrayIconBuilder::new()
+                .with_id("networkless")
+                .with_menu(Box::new(menu))
+                .build()
+            {
                 Ok(tray_icon) => tray_icon,
                 Err(e) => {
                     error!("Failed to create tray icon: {}", e);
