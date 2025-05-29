@@ -57,7 +57,13 @@ async fn main() -> Result<()> {
             };
 
             let event = match state {
-                NmState::Asleep | NmState::ConnectedLocal | NmState::ConnectedSite => Event::Off,
+                NmState::Asleep | NmState::ConnectedLocal | NmState::ConnectedSite => {
+                    if _nm.airplane_mode_enabled().await.unwrap() {
+                        Event::AirplaneMode
+                    } else {
+                        Event::Off
+                    }
+                }
                 NmState::Disconnected => {
                     if _nm.airplane_mode_enabled().await.unwrap() {
                         Event::AirplaneMode
