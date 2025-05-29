@@ -41,7 +41,7 @@ impl NetworkManager {
 
         let output = String::from_utf8(cmd.stdout)?;
 
-        let bluetooth_enabled = output.contains("Soft blocked: yes");
+        let bluetooth_enabled = output.contains("Soft blocked: no");
         Ok(bluetooth_enabled)
     }
 
