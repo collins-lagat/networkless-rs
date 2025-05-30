@@ -163,6 +163,8 @@ async fn main() -> Result<()> {
         }
     }
 
+    info!("Cleaning up");
+
     if let Err(e) = fs::remove_file(lock_file_path).await {
         error!("Failed to remove lock: {}", e);
     }
