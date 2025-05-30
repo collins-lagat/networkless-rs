@@ -2,7 +2,9 @@ use anyhow::{Result, bail};
 use tokio::process::Command;
 use zbus::{Connection, Result as ZbusResult};
 
-use crate::dbus::{ActiveConnectionProxy, DeviceProxy, NetworkManagerProxy};
+use crate::interfaces::{
+    active::ActiveProxy, device::DeviceProxy, network_manager::NetworkManagerProxy,
+};
 
 #[derive(Debug, Clone)]
 pub struct NetworkManager {
@@ -64,13 +66,13 @@ impl NetworkManager {
 
 #[derive(Debug, Clone)]
 pub struct ActiveConnection {
-    pub connection: ActiveConnectionProxy<'static>,
+    pub connection: ActiveProxy<'static>,
 }
 
 impl ActiveConnection {
     pub async fn new(path: zbus::zvariant::OwnedObjectPath) -> Result<Self> {
         let connection = Connection::system().await?;
-        let active_connection = ActiveConnectionProxy::new(&connection, path).await?;
+        let active_connection = ActiveProxy::new(&connection, path).await?;
 
         Ok(Self {
             connection: active_connection,

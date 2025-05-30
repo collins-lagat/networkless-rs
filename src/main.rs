@@ -1,6 +1,6 @@
-mod dbus;
 mod event;
 mod icon;
+mod interfaces;
 mod nm;
 
 use std::{fs::File, path::Path};
