@@ -3,10 +3,7 @@ mod icon;
 mod interfaces;
 mod nm;
 
-use std::{
-    fs::File,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, path::Path};
 
 use anyhow::{Result, bail};
 use event::Event;
@@ -32,12 +29,25 @@ async fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    let lock_file_path = match acquire_lock() {
-        Ok(path) => path,
+    let runtime_dir = match std::env::var("XDG_RUNTIME_DIR") {
+        Ok(dir) => dir,
         Err(e) => {
-            bail!("Failed to acquire lock: {}", e);
+            bail!("XDG_RUNTIME_DIR not set: {}", e);
         }
     };
+
+    let lock_file_path = Path::new(&runtime_dir).join("networkless.lock");
+
+    let lock_file = match File::create(&lock_file_path) {
+        Ok(file) => file,
+        Err(e) => {
+            bail!("Failed to create lock file: {}", e);
+        }
+    };
+
+    if lock_file.try_lock_exclusive().is_err() {
+        bail!("Failed to acquire lock. Another instance is running.");
+    }
 
     info!("Lock acquired");
 
@@ -205,28 +215,4 @@ fn setup_logging() -> Result<()> {
     };
 
     Ok(())
-}
-
-fn acquire_lock() -> Result<PathBuf> {
-    let runtime_dir = match std::env::var("XDG_RUNTIME_DIR") {
-        Ok(dir) => dir,
-        Err(e) => {
-            bail!("XDG_RUNTIME_DIR not set: {}", e);
-        }
-    };
-
-    let lock_file_path = Path::new(&runtime_dir).join("networkless.lock");
-
-    let lock_file = match File::create(&lock_file_path) {
-        Ok(file) => file,
-        Err(e) => {
-            bail!("Failed to create lock file: {}", e);
-        }
-    };
-
-    if lock_file.try_lock_exclusive().is_err() {
-        bail!("Failed to acquire lock. Another instance is running.");
-    }
-
-    Ok(lock_file_path)
 }
