@@ -3,7 +3,10 @@ mod icon;
 mod interfaces;
 mod nm;
 
-use std::{fs::File, path::Path};
+use std::{
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Result, bail};
 use event::Event;
@@ -19,6 +22,7 @@ use nm::{Connectivity, DeviceType, NetworkManager, State as NmState};
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook_tokio::Signals;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
+use tokio::fs;
 use zbus::Connection;
 
 #[tokio::main(flavor = "current_thread")]
@@ -28,10 +32,12 @@ async fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    if let Err(e) = acquire_lock() {
-        eprintln!("Failed to acquire lock: {}", e);
-        std::process::exit(1);
-    }
+    let lock_file_path = match acquire_lock() {
+        Ok(path) => path,
+        Err(e) => {
+            bail!("Failed to acquire lock: {}", e);
+        }
+    };
 
     info!("Lock acquired");
 
@@ -147,6 +153,10 @@ async fn main() -> Result<()> {
         }
     }
 
+    if let Err(e) = fs::remove_file(lock_file_path).await {
+        error!("Failed to remove lock: {}", e);
+    }
+
     handle.close();
     signals_task.await?;
 
@@ -197,7 +207,7 @@ fn setup_logging() -> Result<()> {
     Ok(())
 }
 
-fn acquire_lock() -> Result<()> {
+fn acquire_lock() -> Result<PathBuf> {
     let runtime_dir = match std::env::var("XDG_RUNTIME_DIR") {
         Ok(dir) => dir,
         Err(e) => {
@@ -207,16 +217,16 @@ fn acquire_lock() -> Result<()> {
 
     let lock_file_path = Path::new(&runtime_dir).join("networkless.lock");
 
-    let lock_file = match File::create(lock_file_path) {
+    let lock_file = match File::create(&lock_file_path) {
         Ok(file) => file,
         Err(e) => {
             bail!("Failed to create lock file: {}", e);
         }
     };
 
-    if let Err(e) = lock_file.lock_exclusive() {
-        bail!("Failed to acquire lock: {}", e);
+    if lock_file.try_lock_exclusive().is_err() {
+        bail!("Failed to acquire lock. Another instance is running.");
     }
 
-    Ok(())
+    Ok(lock_file_path)
 }
