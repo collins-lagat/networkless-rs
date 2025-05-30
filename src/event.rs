@@ -16,7 +16,7 @@ pub enum Event {
     Limited,
     Vpn,
     Ethernet,
-    Wifi(u32),
+    Wifi(u8),
 
     Shutdown,
 }

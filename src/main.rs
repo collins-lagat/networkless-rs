@@ -13,11 +13,13 @@ use futures::{
     channel::mpsc::{Sender, channel},
 };
 use icon::TrayIcon;
+use interfaces::{access_point::AccessPointProxy, wireless::WirelessProxy};
 use log::{LevelFilter, error, info};
 use nm::{Connectivity, DeviceType, NetworkManager, State as NmState};
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook_tokio::Signals;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
+use zbus::Connection;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
@@ -87,7 +89,29 @@ async fn main() -> Result<()> {
                             .unwrap();
 
                         match device_type {
-                            DeviceType::Wifi => Event::Wifi(100),
+                            DeviceType::Wifi => {
+                                let conn = Connection::system().await.unwrap();
+                                let device_path = connection
+                                    .devices()
+                                    .await
+                                    .unwrap()
+                                    .first()
+                                    .unwrap()
+                                    .path
+                                    .clone();
+                                let wireless =
+                                    WirelessProxy::new(&conn, device_path).await.unwrap();
+                                let active_access_point = AccessPointProxy::new(
+                                    &conn,
+                                    wireless.active_access_point().await.unwrap(),
+                                )
+                                .await
+                                .unwrap();
+
+                                let strength = active_access_point.strength().await.unwrap();
+
+                                Event::Wifi(strength)
+                            }
                             DeviceType::TunTap => Event::Vpn,
                             DeviceType::Ethernet => Event::Ethernet,
                             _ => Event::Unknown,

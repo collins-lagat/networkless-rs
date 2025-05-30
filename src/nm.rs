@@ -93,15 +93,16 @@ impl ActiveConnection {
 
 #[derive(Debug, Clone)]
 pub struct Device {
+    pub path: zbus::zvariant::OwnedObjectPath,
     pub device: DeviceProxy<'static>,
 }
 
 impl Device {
     pub async fn new(path: zbus::zvariant::OwnedObjectPath) -> Result<Self> {
         let connection = Connection::system().await?;
-        let device = DeviceProxy::new(&connection, path).await?;
+        let device = DeviceProxy::new(&connection, path.clone()).await?;
 
-        Ok(Self { device })
+        Ok(Self { device, path })
     }
 
     pub async fn device_type(&self) -> ZbusResult<DeviceType> {
