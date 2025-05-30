@@ -50,10 +50,17 @@ impl TrayIcon {
             let ctx = gtk::glib::MainContext::default();
             ctx.spawn_local(async move {
                 let mut current_event: Option<Event> = None;
+                let mut counter = 0;
 
                 while let Some(event) = rx.next().await {
-                    if current_event == Some(event.clone()) {
+                    if current_event == Some(event.clone()) && counter == 2 {
                         continue;
+                    }
+
+                    if current_event == Some(event.clone()) {
+                        counter += 1;
+                    } else {
+                        counter = 0;
                     }
 
                     current_event = Some(event.clone());
