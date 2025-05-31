@@ -18,4 +18,5 @@ pub enum Action {
     ConnectToAccessPoint(String, String),
     ToggleWifi,
     ToggleWired,
+    ToggleAirplaneMode,
 }

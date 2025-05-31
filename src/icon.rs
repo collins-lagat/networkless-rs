@@ -58,10 +58,23 @@ impl TrayIcon {
             )
             .unwrap();
 
+            let airplane_mode_toggle_menu_item =
+                MenuItem::with_id("airplane_mode_toggle_menu_item", "OFF", true, None);
+
+            let airplane_mode_submenu = Submenu::with_id_and_items(
+                "airplane_mode_submenu",
+                "Airplane Mode: OFF",
+                true,
+                &[&airplane_mode_toggle_menu_item],
+            )
+            .unwrap();
+
             if let Err(e) = menu.append_items(&[
                 &wired_submenu,
                 &tray_icon::menu::PredefinedMenuItem::separator(),
                 &wifi_submenu,
+                &tray_icon::menu::PredefinedMenuItem::separator(),
+                &airplane_mode_submenu,
             ]) {
                 error!("Failed to append menu item: {}", e);
                 return;
@@ -88,6 +101,11 @@ impl TrayIcon {
                 "wifi_toggle_menu_item" => {
                     local_action_sender
                         .unbounded_send(Action::ToggleWifi)
+                        .unwrap();
+                }
+                "airplane_mode_toggle_menu_item" => {
+                    local_action_sender
+                        .unbounded_send(Action::ToggleAirplaneMode)
                         .unwrap();
                 }
                 _ => {}
@@ -118,6 +136,17 @@ impl TrayIcon {
                                 wifi_submenu.set_text("Wifi: OFF");
                                 wifi_toggle_menu_item.set_text("OFF");
                                 println!("Turning wifi off");
+                            }
+                        }
+                        Action::ToggleAirplaneMode => {
+                            if airplane_mode_toggle_menu_item.text() == "OFF" {
+                                airplane_mode_submenu.set_text("Airplane Mode: ON");
+                                airplane_mode_toggle_menu_item.set_text("ON");
+                                println!("Turning airplane mode on");
+                            } else {
+                                airplane_mode_submenu.set_text("Airplane Mode: OFF");
+                                airplane_mode_toggle_menu_item.set_text("OFF");
+                                println!("Turning airplane mode off");
                             }
                         }
                         _ => {}
