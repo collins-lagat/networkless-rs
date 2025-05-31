@@ -4,6 +4,7 @@ use anyhow::{Context, Result, bail};
 use futures::StreamExt;
 use futures::channel::mpsc::{UnboundedSender, unbounded};
 use log::error;
+use tray_icon::menu::{MenuEvent, MenuItem, Submenu};
 use tray_icon::{Icon, TrayIconBuilder, menu::Menu};
 
 use crate::event::Event;
@@ -35,6 +36,37 @@ impl TrayIcon {
             gtk::init().unwrap();
             let menu = Menu::new();
 
+            let wired_toggle_menu_item =
+                MenuItem::with_id("wired_toggle_menu_item", "OFF", true, None);
+
+            let wired_submenu = Submenu::with_id_and_items(
+                "wired_submenu",
+                "Wired: OFF",
+                true,
+                &[&wired_toggle_menu_item],
+            )
+            .unwrap();
+
+            let wifi_toggle_menu_item =
+                MenuItem::with_id("wifi_toggle_menu_item", "OFF", true, None);
+
+            let wifi_submenu = Submenu::with_id_and_items(
+                "wifi_submenu",
+                "Wifi: OFF",
+                true,
+                &[&wifi_toggle_menu_item],
+            )
+            .unwrap();
+
+            if let Err(e) = menu.append_items(&[
+                &wired_submenu,
+                &tray_icon::menu::PredefinedMenuItem::separator(),
+                &wifi_submenu,
+            ]) {
+                error!("Failed to append menu item: {}", e);
+                return;
+            };
+
             let tray_icon = match TrayIconBuilder::new()
                 .with_id("networkless")
                 .with_menu(Box::new(menu))
@@ -46,6 +78,13 @@ impl TrayIcon {
                     return;
                 }
             };
+            MenuEvent::set_event_handler(Some(move |event: MenuEvent| match event.id().as_ref() {
+                "wired_toggle_menu_item" => {
+                }
+                "wifi_toggle_menu_item" => {
+                }
+                _ => {}
+            }));
 
             let ctx = gtk::glib::MainContext::default();
             ctx.spawn_local(async move {
