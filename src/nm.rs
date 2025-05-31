@@ -62,6 +62,26 @@ impl NetworkManager {
         let active_connections = self.nm.primary_connection().await?;
         Ok(ActiveConnection::new(active_connections).await.unwrap())
     }
+
+    pub async fn activate_connection(
+        &self,
+        connection: zbus::zvariant::OwnedObjectPath,
+        device: zbus::zvariant::OwnedObjectPath,
+        specific_object: zbus::zvariant::OwnedObjectPath,
+    ) -> Result<()> {
+        self.nm
+            .activate_connection(&connection, &device, &specific_object)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn deactivate_connection(
+        &self,
+        active_connection: &zbus::zvariant::OwnedObjectPath,
+    ) -> Result<()> {
+        self.nm.deactivate_connection(active_connection).await?;
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone)]

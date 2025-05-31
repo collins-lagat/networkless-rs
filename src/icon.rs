@@ -8,6 +8,7 @@ use tray_icon::menu::{MenuEvent, MenuItem, Submenu};
 use tray_icon::{Icon, TrayIconBuilder, menu::Menu};
 
 use crate::event::{Action, Event};
+use crate::nm::NetworkManager;
 
 const AIRPLANE_MODE_BYTES: &[u8] = include_bytes!("../assets/airplane_mode.png");
 const BUSY_BYTES: &[u8] = include_bytes!("../assets/busy.png");
@@ -28,10 +29,11 @@ pub struct TrayIcon {
 }
 
 impl TrayIcon {
-    pub fn new() -> Self {
+    pub fn new(nm: NetworkManager) -> Self {
         let (tx, mut rx) = unbounded::<Event>();
 
         let (local_action_sender, mut local_action_receiver) = unbounded::<Action>();
+
         thread::spawn(move || {
             gtk::init().unwrap();
             let menu = Menu::new();
@@ -120,33 +122,33 @@ impl TrayIcon {
                             if wired_toggle_menu_item.text() == "OFF" {
                                 wired_submenu.set_text("Wired: ON");
                                 wired_toggle_menu_item.set_text("ON");
-                                println!("Turning wired on");
+                                // nm.activate_connection(connection, device, "/").await.unwrap();
                             } else {
                                 wired_submenu.set_text("Wired: OFF");
                                 wired_toggle_menu_item.set_text("OFF");
-                                println!("Turning wired off");
+                                // nm.deactivate_connection(connection).await.unwrap();
                             }
                         }
                         Action::ToggleWifi => {
                             if wifi_toggle_menu_item.text() == "OFF" {
                                 wifi_submenu.set_text("Wifi: ON");
                                 wifi_toggle_menu_item.set_text("ON");
-                                println!("Turning wifi on");
+                                // nm.activate_connection(connection, device, access_point).await.unwrap();
                             } else {
                                 wifi_submenu.set_text("Wifi: OFF");
                                 wifi_toggle_menu_item.set_text("OFF");
-                                println!("Turning wifi off");
+                                // nm.deactivate_connection(connection).await.unwrap();
                             }
                         }
                         Action::ToggleAirplaneMode => {
                             if airplane_mode_toggle_menu_item.text() == "OFF" {
                                 airplane_mode_submenu.set_text("Airplane Mode: ON");
                                 airplane_mode_toggle_menu_item.set_text("ON");
-                                println!("Turning airplane mode on");
+                                // nm.activate_connection(connection, device, "/").await.unwrap();
                             } else {
                                 airplane_mode_submenu.set_text("Airplane Mode: OFF");
                                 airplane_mode_toggle_menu_item.set_text("OFF");
-                                println!("Turning airplane mode off");
+                                // nm.deactivate_connection(connection).await.unwrap();
                             }
                         }
                         _ => {}

@@ -59,9 +59,9 @@ async fn main() -> Result<()> {
 
     let signals_task = tokio::spawn(handle_signals(signals, tx.clone()));
 
-    let mut tray_icon = TrayIcon::new();
-
     let nm = NetworkManager::new().await?;
+
+    let mut tray_icon = TrayIcon::new(nm.clone());
 
     let _nm = nm.clone();
     tokio::spawn(async move {
