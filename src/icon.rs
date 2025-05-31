@@ -7,7 +7,7 @@ use log::error;
 use tray_icon::menu::{MenuEvent, MenuItem, Submenu};
 use tray_icon::{Icon, TrayIconBuilder, menu::Menu};
 
-use crate::event::Event;
+use crate::event::{Action, Event};
 
 const AIRPLANE_MODE_BYTES: &[u8] = include_bytes!("../assets/airplane_mode.png");
 const BUSY_BYTES: &[u8] = include_bytes!("../assets/busy.png");
@@ -31,7 +31,7 @@ impl TrayIcon {
     pub fn new() -> Self {
         let (tx, mut rx) = unbounded::<Event>();
 
-        let _tx = tx.clone();
+        let (local_action_sender, mut local_action_receiver) = unbounded::<Action>();
         thread::spawn(move || {
             gtk::init().unwrap();
             let menu = Menu::new();
@@ -78,15 +78,53 @@ impl TrayIcon {
                     return;
                 }
             };
+
             MenuEvent::set_event_handler(Some(move |event: MenuEvent| match event.id().as_ref() {
                 "wired_toggle_menu_item" => {
+                    local_action_sender
+                        .unbounded_send(Action::ToggleWired)
+                        .unwrap();
                 }
                 "wifi_toggle_menu_item" => {
+                    local_action_sender
+                        .unbounded_send(Action::ToggleWifi)
+                        .unwrap();
                 }
                 _ => {}
             }));
 
             let ctx = gtk::glib::MainContext::default();
+
+            ctx.spawn_local(async move {
+                while let Some(action) = local_action_receiver.next().await {
+                    match action {
+                        Action::ToggleWired => {
+                            if wired_toggle_menu_item.text() == "OFF" {
+                                wired_submenu.set_text("Wired: ON");
+                                wired_toggle_menu_item.set_text("ON");
+                                println!("Turning wired on");
+                            } else {
+                                wired_submenu.set_text("Wired: OFF");
+                                wired_toggle_menu_item.set_text("OFF");
+                                println!("Turning wired off");
+                            }
+                        }
+                        Action::ToggleWifi => {
+                            if wifi_toggle_menu_item.text() == "OFF" {
+                                wifi_submenu.set_text("Wifi: ON");
+                                wifi_toggle_menu_item.set_text("ON");
+                                println!("Turning wifi on");
+                            } else {
+                                wifi_submenu.set_text("Wifi: OFF");
+                                wifi_toggle_menu_item.set_text("OFF");
+                                println!("Turning wifi off");
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            });
+
             ctx.spawn_local(async move {
                 let mut current_event: Option<Event> = None;
                 let mut counter = 0;

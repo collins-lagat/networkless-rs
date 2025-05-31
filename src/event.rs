@@ -13,3 +13,9 @@ pub enum Event {
     Shutdown,
 }
 
+pub enum Action {
+    Disconnect(String, String),
+    ConnectToAccessPoint(String, String),
+    ToggleWifi,
+    ToggleWired,
+}
