@@ -107,12 +107,14 @@ impl TrayIcon {
                             };
                         }
                         Event::Wifi(strength) => {
+                            // https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/js/ui/status/network.js?ref_type=heads#L46-L57
+
                             let icon = match strength {
-                                0 => WIFI_0_BYTES,
-                                1..=24 => WIFI_25_BYTES,
-                                25..=49 => WIFI_50_BYTES,
-                                50..=74 => WIFI_75_BYTES,
-                                75..=100 => WIFI_100_BYTES,
+                                0..=19 => WIFI_0_BYTES,
+                                20..=39 => WIFI_25_BYTES,
+                                40..=49 => WIFI_50_BYTES,
+                                50..=79 => WIFI_75_BYTES,
+                                80..=100 => WIFI_100_BYTES,
                                 _ => WIFI_100_BYTES,
                             };
 
