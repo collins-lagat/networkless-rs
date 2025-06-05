@@ -17,7 +17,12 @@ impl App {
 
     pub async fn run(&mut self) {
         while let Some(event) = self.rx.recv().await {
-            println!("{:?}", event);
+            println!("Event: {:?}", event);
+
+            match event {
+                Event::Shutdown => break,
+                _ => {}
+            }
         }
     }
 }
