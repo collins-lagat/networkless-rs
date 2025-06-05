@@ -1,26 +1,17 @@
-mod event;
-mod icon;
+mod app;
 mod interfaces;
-mod nm;
 
 use std::{fs::File, path::Path};
 
 use anyhow::{Result, bail};
-use event::Event;
+use app::{App, Event};
 use fs2::FileExt;
-use futures::{
-    SinkExt, StreamExt,
-    channel::mpsc::{Sender, channel},
-};
-use icon::TrayIcon;
-use interfaces::{access_point::AccessPointProxy, wireless::WirelessProxy};
-use log::{LevelFilter, error, info};
-use nm::{Connectivity, DeviceType, NetworkManager, State as NmState};
+use futures::StreamExt;
+use log::{LevelFilter, info};
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook_tokio::Signals;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
-use tokio::fs;
-use zbus::Connection;
+use tokio::sync::mpsc::{Sender, channel};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
@@ -51,7 +42,7 @@ async fn main() -> Result<()> {
 
     info!("Lock acquired");
 
-    let (mut tx, mut rx) = channel::<Event>(32);
+    let (tx, rx) = channel::<Event>(32);
 
     let signals = Signals::new([SIGINT, SIGTERM]).unwrap();
 
@@ -59,115 +50,9 @@ async fn main() -> Result<()> {
 
     let signals_task = tokio::spawn(handle_signals(signals, tx.clone()));
 
-    let nm = NetworkManager::new().await?;
+    let mut app = App::new(tx, rx);
 
-    let mut tray_icon = TrayIcon::new(nm.clone());
-
-    let _nm = nm.clone();
-    tokio::spawn(async move {
-        loop {
-            let state = match _nm.state().await {
-                Ok(state) => state,
-                Err(e) => {
-                    error!("Failed to get state: {}", e);
-                    continue;
-                }
-            };
-
-            let event = match state {
-                NmState::Asleep | NmState::ConnectedLocal | NmState::ConnectedSite => {
-                    if _nm.airplane_mode_enabled().await.unwrap() {
-                        Event::AirplaneMode
-                    } else {
-                        Event::Off
-                    }
-                }
-                NmState::Disconnected => {
-                    if _nm.airplane_mode_enabled().await.unwrap() {
-                        Event::AirplaneMode
-                    } else {
-                        Event::Disconnected
-                    }
-                }
-                NmState::Connecting | NmState::Disconnecting => Event::Busy,
-                NmState::ConnectedGlobal => match _nm.connectivity().await.unwrap() {
-                    Connectivity::Full => {
-                        let connection = _nm.active_connection().await.unwrap();
-
-                        let device_type = connection
-                            .devices()
-                            .await
-                            .unwrap()
-                            .first()
-                            .unwrap()
-                            .device_type()
-                            .await
-                            .unwrap();
-
-                        match device_type {
-                            DeviceType::Wifi => {
-                                let conn = Connection::system().await.unwrap();
-                                let device_path = connection
-                                    .devices()
-                                    .await
-                                    .unwrap()
-                                    .first()
-                                    .unwrap()
-                                    .path
-                                    .clone();
-                                let wireless =
-                                    WirelessProxy::new(&conn, device_path).await.unwrap();
-                                let active_access_point = AccessPointProxy::new(
-                                    &conn,
-                                    wireless.active_access_point().await.unwrap(),
-                                )
-                                .await
-                                .unwrap();
-
-                                let strength = active_access_point.strength().await.unwrap();
-
-                                Event::Wifi(strength)
-                            }
-                            DeviceType::TunTap => Event::Vpn,
-                            DeviceType::Ethernet => Event::Ethernet,
-                            _ => Event::Unknown,
-                        }
-                    }
-                    Connectivity::Loss => Event::Limited,
-                    _ => Event::Limited,
-                },
-                NmState::Unknown => Event::Unknown,
-            };
-
-            if let Err(e) = tx.send(event).await {
-                error!("Failed to send event: {}", e);
-            }
-
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-        }
-    });
-
-    loop {
-        match rx.next().await {
-            Some(event) => {
-                let _event = event.clone();
-                tray_icon.send(_event).await;
-                if let Event::Shutdown = event {
-                    break;
-                }
-            }
-            None => {
-                info!("No event");
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            }
-        }
-    }
-
-    info!("Cleaning up");
-
-    if let Err(e) = fs::remove_file(lock_file_path).await {
-        error!("Failed to remove lock: {}", e);
-    }
+    app.run().await;
 
     handle.close();
     signals_task.await?;
@@ -175,7 +60,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn handle_signals(mut signals: Signals, mut tx: Sender<Event>) {
+async fn handle_signals(mut signals: Signals, tx: Sender<Event>) {
     while let Some(signal) = signals.next().await {
         match signal {
             SIGTERM | SIGINT => {
