@@ -1,5 +1,6 @@
 mod app;
 mod interfaces;
+mod tray;
 
 use std::{fs::File, path::Path};
 
@@ -7,11 +8,20 @@ use anyhow::{Result, bail};
 use app::{App, Event};
 use fs2::FileExt;
 use futures::StreamExt;
-use log::{LevelFilter, info};
+use ksni::TrayMethods;
+use log::{LevelFilter, error, info};
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook_tokio::Signals;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
-use tokio::sync::mpsc::{Sender, channel};
+use tokio::{
+    fs,
+    sync::mpsc::{Sender, channel},
+};
+use tray::Tray;
+
+pub const APP_ID: &str = "com.collinslagat.applets.networkless";
+const LOCK_FILE: &str = "networkless.lock";
+const LOG_FILE: &str = "networkless.log";
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
@@ -27,7 +37,7 @@ async fn main() -> Result<()> {
         }
     };
 
-    let lock_file_path = Path::new(&runtime_dir).join("networkless.lock");
+    let lock_file_path = Path::new(&runtime_dir).join(LOCK_FILE);
 
     let lock_file = match File::create(&lock_file_path) {
         Ok(file) => file,
@@ -50,9 +60,19 @@ async fn main() -> Result<()> {
 
     let signals_task = tokio::spawn(handle_signals(signals, tx.clone()));
 
+    let tray = Tray::new();
+
+    tray.spawn().await?;
+
     let mut app = App::new(tx, rx);
 
     app.run().await;
+
+    info!("Cleaning up");
+
+    if let Err(e) = fs::remove_file(lock_file_path).await {
+        error!("Failed to remove lock: {}", e);
+    }
 
     handle.close();
     signals_task.await?;
@@ -80,7 +100,7 @@ fn setup_logging() -> Result<()> {
         }
     };
 
-    let log_file_path = Path::new(&runtime_dir).join("networkless.log");
+    let log_file_path = Path::new(&runtime_dir).join(LOG_FILE);
 
     let log_file = match File::create(log_file_path) {
         Ok(file) => file,
