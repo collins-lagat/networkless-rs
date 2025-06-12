@@ -4,7 +4,7 @@ use image::GenericImageView;
 
 use crate::APP_ID;
 
-enum Icon {
+pub enum Icon {
     Unknown,
     Off,
     Busy,
@@ -35,6 +35,26 @@ impl Tray {
             vpn_state: None,
             airplane_mode_state: None,
         }
+    }
+
+    pub fn set_icon(&mut self, icon: Icon) {
+        self.icon = Some(icon);
+    }
+
+    pub fn set_wifi_state(&mut self, wifi_state: WifiState) {
+        self.wifi_state = Some(wifi_state);
+    }
+
+    pub fn set_wired_state(&mut self, wired_state: WiredState) {
+        self.wired_state = Some(wired_state);
+    }
+
+    pub fn set_bluetooth_state(&mut self, bluetooth_state: BluetoothState) {
+        self.bluetooth_state = Some(bluetooth_state);
+    }
+
+    pub fn set_vpn_state(&mut self, vpn_state: VPNState) {
+        self.vpn_state = Some(vpn_state);
     }
 }
 
