@@ -21,7 +21,7 @@ pub struct Tray {
     pub wifi_state: Option<WifiState>,
     pub wired_state: Option<WiredState>,
     pub bluetooth_state: Option<BluetoothState>,
-    pub vpn_state: Option<VPNState<'static>>,
+    pub vpn_state: Option<VPNState>,
     pub airplane_mode_state: Option<AirplaneModeState>,
 }
 
@@ -252,7 +252,7 @@ impl ksni::Tray for Tray {
                         }
                         .into(),
                         StandardItem {
-                            label: vpn_state.active_connection.into(),
+                            label: vpn_state.active_connection.clone(),
                             ..Default::default()
                         }
                         .into(),
@@ -284,9 +284,9 @@ pub struct BluetoothState {
     devices: Vec<String>,
 }
 
-pub struct VPNState<'a> {
+pub struct VPNState {
     on: bool,
-    active_connection: &'a str,
+    active_connection: String,
 }
 
 pub struct AirplaneModeState {
