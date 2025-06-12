@@ -34,6 +34,8 @@ impl ksni::Tray for Tray {
     }
 
     fn icon_pixmap(&self) -> Vec<ksni::Icon> {
+        let mut icons = vec![];
+
         static UNKNOWN_ICON: LazyLock<ksni::Icon> =
             LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/unknown.png")));
 
@@ -74,6 +76,13 @@ impl ksni::Tray for Tray {
 
         static WIFI_0_ICON: LazyLock<ksni::Icon> =
             LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/wifi-0.png")));
+
+        static BLUETOOTH_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/bluetooth.png")));
+
+        static VIRTUAL_VPN_ICON: LazyLock<ksni::Icon> = LazyLock::new(|| {
+            get_icon_from_image_bytes(include_bytes!("../assets/virtual-vpn.png"))
+        });
 
         match self.icon {
             Some(Icon::Unknown) => vec![UNKNOWN_ICON.clone()],
