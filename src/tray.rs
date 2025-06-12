@@ -2,7 +2,7 @@ use std::sync::LazyLock;
 
 use image::GenericImageView;
 
-use crate::APP_ID;
+use crate::{APP_ID, app::App};
 
 pub enum Icon {
     Unknown,
@@ -16,8 +16,9 @@ pub enum Icon {
     Wifi(u8),
 }
 
-pub struct Tray {
+pub struct Tray<'a> {
     icon: Option<Icon>,
+    app: Option<&'a App>,
     pub wifi_state: Option<WifiState>,
     pub wired_state: Option<WiredState>,
     pub bluetooth_state: Option<BluetoothState>,
@@ -25,16 +26,21 @@ pub struct Tray {
     pub airplane_mode_state: Option<AirplaneModeState>,
 }
 
-impl Tray {
+impl<'a> Tray<'a> {
     pub fn new() -> Self {
         Self {
             icon: None,
+            app: None,
             wifi_state: None,
             wired_state: None,
             bluetooth_state: None,
             vpn_state: None,
             airplane_mode_state: None,
         }
+    }
+
+    pub fn set_app(&mut self, app: &'a App) {
+        self.app = Some(app);
     }
 
     pub fn set_icon(&mut self, icon: Icon) {
@@ -58,7 +64,7 @@ impl Tray {
     }
 }
 
-impl ksni::Tray for Tray {
+impl<'a> ksni::Tray for Tray<'a> {
     fn id(&self) -> String {
         APP_ID.into()
     }

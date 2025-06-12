@@ -62,9 +62,12 @@ async fn main() -> Result<()> {
 
     let tray = Tray::new();
 
-    tray.spawn().await?;
+    let tray_handle = tray.spawn().await?;
 
     let mut app = App::new(tx, rx);
+
+    tray.set_app(&app);
+    app.set_tray_handle(tray_handle);
 
     app.run().await;
 
