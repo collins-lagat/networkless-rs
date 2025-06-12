@@ -202,7 +202,13 @@ impl ksni::Tray for Tray {
                         RadioGroup {
                             selected: 0,
                             options: connections,
-                            ..Default::default()
+                            select: Box::new(|this: &mut Self, current| {
+                                if let Some(app) = this.app.as_ref() {
+                                    app.send_action_blocking(Action::ChangeAccessPoint(
+                                        current.to_string(),
+                                    ));
+                                }
+                            }),
                         }
                         .into(),
                     ],
