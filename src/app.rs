@@ -38,6 +38,10 @@ impl App {
         self.action_tx.send(action).await.unwrap();
     }
 
+    pub fn send_action_blocking(&self, action: Action) {
+        self.action_tx.blocking_send(action).unwrap();
+    }
+
     pub async fn run(
         &self,
         mut event_rx: Receiver<Event>,

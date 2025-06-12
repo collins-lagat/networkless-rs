@@ -2,7 +2,10 @@ use std::sync::LazyLock;
 
 use image::GenericImageView;
 
-use crate::{APP_ID, app::App};
+use crate::{
+    APP_ID,
+    app::{Action, App},
+};
 
 #[derive(Debug, Clone)]
 pub enum Icon {
@@ -188,6 +191,11 @@ impl ksni::Tray for Tray {
                         CheckmarkItem {
                             label: "On".into(),
                             checked: wifi_state.on,
+                            activate: Box::new(|this: &mut Self| {
+                                if let Some(app) = this.app.as_ref() {
+                                    app.send_action_blocking(Action::ToggleWifi);
+                                }
+                            }),
                             ..Default::default()
                         }
                         .into(),
@@ -212,6 +220,11 @@ impl ksni::Tray for Tray {
                         CheckmarkItem {
                             label: "On".into(),
                             checked: wired_state.on,
+                            activate: Box::new(|this: &mut Self| {
+                                if let Some(app) = this.app.as_ref() {
+                                    app.send_action_blocking(Action::ToggleWired);
+                                }
+                            }),
                             ..Default::default()
                         }
                         .into(),
@@ -232,6 +245,11 @@ impl ksni::Tray for Tray {
                 CheckmarkItem {
                     label: "On".into(),
                     checked: bluetooth_state.on,
+                    activate: Box::new(|this: &mut Self| {
+                        if let Some(app) = this.app.as_ref() {
+                            app.send_action_blocking(Action::ToggleBluetooth);
+                        }
+                    }),
                     ..Default::default()
                 }
                 .into(),
@@ -262,6 +280,11 @@ impl ksni::Tray for Tray {
                 CheckmarkItem {
                     label: "Airplane Mode".into(),
                     checked: airplane_mode_state.on,
+                    activate: Box::new(|this: &mut Self| {
+                        if let Some(app) = this.app.as_ref() {
+                            app.send_action_blocking(Action::ToggleAirplaneMode);
+                        }
+                    }),
                     ..Default::default()
                 }
                 .into(),
