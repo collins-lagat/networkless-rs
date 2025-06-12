@@ -26,7 +26,6 @@ pub struct Tray {
     app: Option<App>,
     pub wifi_state: Option<WifiState>,
     pub wired_state: Option<WiredState>,
-    pub bluetooth_state: Option<BluetoothState>,
     pub vpn_state: Option<VPNState>,
     pub airplane_mode_state: Option<AirplaneModeState>,
 }
@@ -38,7 +37,6 @@ impl Tray {
             app: None,
             wifi_state: None,
             wired_state: None,
-            bluetooth_state: None,
             vpn_state: None,
             airplane_mode_state: None,
         }
@@ -58,10 +56,6 @@ impl Tray {
 
     pub fn set_wired_state(&mut self, wired_state: WiredState) {
         self.wired_state = Some(wired_state);
-    }
-
-    pub fn set_bluetooth_state(&mut self, bluetooth_state: BluetoothState) {
-        self.bluetooth_state = Some(bluetooth_state);
     }
 
     pub fn set_vpn_state(&mut self, vpn_state: VPNState) {
@@ -118,9 +112,6 @@ impl ksni::Tray for Tray {
         static WIFI_0_ICON: LazyLock<ksni::Icon> =
             LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/wifi-0.png")));
 
-        static BLUETOOTH_ICON: LazyLock<ksni::Icon> =
-            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/bluetooth.png")));
-
         static VIRTUAL_VPN_ICON: LazyLock<ksni::Icon> = LazyLock::new(|| {
             get_icon_from_image_bytes(include_bytes!("../assets/virtual-vpn.png"))
         });
@@ -142,10 +133,6 @@ impl ksni::Tray for Tray {
             Some(Icon::Wifi(_)) => unreachable!(),
             None => {}
         };
-
-        if self.bluetooth_state.is_some() {
-            icons.push(BLUETOOTH_ICON.clone());
-        }
 
         if self.vpn_state.is_some() {
             icons.push(VIRTUAL_VPN_ICON.clone());
@@ -246,41 +233,6 @@ impl ksni::Tray for Tray {
             );
         }
 
-        if let Some(bluetooth_state) = &self.bluetooth_state {
-            let mut submenu = vec![
-                CheckmarkItem {
-                    label: "On".into(),
-                    checked: bluetooth_state.on,
-                    activate: Box::new(|this: &mut Self| {
-                        if let Some(app) = this.app.as_ref() {
-                            app.send_action_blocking(Action::ToggleBluetooth);
-                        }
-                    }),
-                    ..Default::default()
-                }
-                .into(),
-            ];
-
-            for device in bluetooth_state.devices.iter() {
-                submenu.push(
-                    StandardItem {
-                        label: device.clone(),
-                        ..Default::default()
-                    }
-                    .into(),
-                );
-            }
-
-            menu.push(
-                SubMenu {
-                    label: "Bluetooth".into(),
-                    submenu,
-                    ..Default::default()
-                }
-                .into(),
-            );
-        }
-
         if let Some(airplane_mode_state) = &self.airplane_mode_state {
             menu.push(
                 CheckmarkItem {
@@ -334,12 +286,6 @@ pub struct WifiState {
 pub struct WiredState {
     on: bool,
     speed: u8,
-}
-
-#[derive(Debug, Clone)]
-pub struct BluetoothState {
-    on: bool,
-    devices: Vec<String>,
 }
 
 #[derive(Debug, Clone)]

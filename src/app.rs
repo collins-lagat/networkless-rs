@@ -13,7 +13,6 @@ pub enum Action {
     ChangeAccessPoint(String),
     ToggleWifi,
     ToggleWired,
-    ToggleBluetooth,
     ToggleAirplaneMode,
 }
 
