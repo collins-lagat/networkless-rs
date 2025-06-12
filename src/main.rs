@@ -5,7 +5,7 @@ mod tray;
 use std::{fs::File, path::Path};
 
 use anyhow::{Result, bail};
-use app::{App, Event};
+use app::{Action, App, Event};
 use fs2::FileExt;
 use futures::StreamExt;
 use ksni::TrayMethods;
@@ -52,23 +52,24 @@ async fn main() -> Result<()> {
 
     info!("Lock acquired");
 
-    let (tx, mut rx) = channel::<Event>(32);
+    let (event_tx, event_rx) = channel::<Event>(32);
+    let (action_tx, action_rx) = channel::<Action>(32);
 
     let signals = Signals::new([SIGINT, SIGTERM]).unwrap();
 
     let handle = signals.handle();
 
-    let signals_task = tokio::spawn(handle_signals(signals, tx.clone()));
+    let signals_task = tokio::spawn(handle_signals(signals, event_tx.clone()));
 
     let mut tray = Tray::new();
 
-    let app = App::new(tx);
+    let app = App::new(event_tx, action_tx);
 
     tray.set_app(app.clone());
 
     let tray_handle = tray.spawn().await?;
 
-    app.run(&mut rx, tray_handle).await;
+    app.run(event_rx, action_rx, tray_handle).await;
 
     info!("Cleaning up");
 
