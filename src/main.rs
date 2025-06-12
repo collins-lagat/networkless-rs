@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
 
     info!("Lock acquired");
 
-    let (tx, rx) = channel::<Event>(32);
+    let (tx, mut rx) = channel::<Event>(32);
 
     let signals = Signals::new([SIGINT, SIGTERM]).unwrap();
 
@@ -60,16 +60,15 @@ async fn main() -> Result<()> {
 
     let signals_task = tokio::spawn(handle_signals(signals, tx.clone()));
 
-    let tray = Tray::new();
+    let mut tray = Tray::new();
+
+    let app = App::new(tx);
+
+    tray.set_app(app.clone());
 
     let tray_handle = tray.spawn().await?;
 
-    let mut app = App::new(tx, rx);
-
-    tray.set_app(&app);
-    app.set_tray_handle(tray_handle);
-
-    app.run().await;
+    app.run(&mut rx, tray_handle).await;
 
     info!("Cleaning up");
 

@@ -4,6 +4,7 @@ use image::GenericImageView;
 
 use crate::{APP_ID, app::App};
 
+#[derive(Debug, Clone)]
 pub enum Icon {
     Unknown,
     Off,
@@ -16,9 +17,10 @@ pub enum Icon {
     Wifi(u8),
 }
 
-pub struct Tray<'a> {
+#[derive(Debug, Clone)]
+pub struct Tray {
     icon: Option<Icon>,
-    app: Option<&'a App>,
+    app: Option<App>,
     pub wifi_state: Option<WifiState>,
     pub wired_state: Option<WiredState>,
     pub bluetooth_state: Option<BluetoothState>,
@@ -26,7 +28,7 @@ pub struct Tray<'a> {
     pub airplane_mode_state: Option<AirplaneModeState>,
 }
 
-impl<'a> Tray<'a> {
+impl Tray {
     pub fn new() -> Self {
         Self {
             icon: None,
@@ -39,7 +41,7 @@ impl<'a> Tray<'a> {
         }
     }
 
-    pub fn set_app(&mut self, app: &'a App) {
+    pub fn set_app(&mut self, app: App) {
         self.app = Some(app);
     }
 
@@ -64,7 +66,7 @@ impl<'a> Tray<'a> {
     }
 }
 
-impl<'a> ksni::Tray for Tray<'a> {
+impl ksni::Tray for Tray {
     fn id(&self) -> String {
         APP_ID.into()
     }
@@ -293,26 +295,31 @@ impl<'a> ksni::Tray for Tray<'a> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct WifiState {
     on: bool,
     connections: Vec<String>,
 }
 
+#[derive(Debug, Clone)]
 pub struct WiredState {
     on: bool,
     speed: u8,
 }
 
+#[derive(Debug, Clone)]
 pub struct BluetoothState {
     on: bool,
     devices: Vec<String>,
 }
 
+#[derive(Debug, Clone)]
 pub struct VPNState {
     on: bool,
     active_connection: String,
 }
 
+#[derive(Debug, Clone)]
 pub struct AirplaneModeState {
     on: bool,
 }
