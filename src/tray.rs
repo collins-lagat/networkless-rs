@@ -269,8 +269,6 @@ impl ksni::Tray for Tray {
 
 pub struct WifiState {
     on: bool,
-    strength: u8,
-    active_connection: String,
     connections: Vec<String>,
 }
 
