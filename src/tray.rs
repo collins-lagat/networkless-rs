@@ -94,7 +94,17 @@ impl ksni::Tray for Tray {
     }
 
     fn title(&self) -> String {
-        "Networkless".into()
+        match self.icon {
+            Icon::Unknown => "Unknown".into(),
+            Icon::Off => "Off".into(),
+            Icon::Busy => "Busy".into(),
+            Icon::Disconnected => "Disconnected".into(),
+            Icon::AirplaneMode => "Airplane Mode".into(),
+            Icon::Limited => "Limited".into(),
+            Icon::Vpn => "VPN".into(),
+            Icon::Ethernet => "Ethernet".into(),
+            Icon::Wifi(_) => "Wifi".into(),
+        }
     }
 
     fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
