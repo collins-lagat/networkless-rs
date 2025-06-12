@@ -14,6 +14,7 @@ pub enum Action {
     ToggleWifi,
     ToggleWired,
     ToggleAirplaneMode,
+    ToggleVPN,
 }
 
 #[derive(Debug, Clone)]

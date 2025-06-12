@@ -257,6 +257,11 @@ impl ksni::Tray for Tray {
                         CheckmarkItem {
                             label: "On".into(),
                             checked: vpn_state.on,
+                            activate: Box::new(|this: &mut Self| {
+                                if let Some(app) = this.app.as_ref() {
+                                    app.send_action_blocking(Action::ToggleVPN);
+                                }
+                            }),
                             ..Default::default()
                         }
                         .into(),
