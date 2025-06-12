@@ -17,13 +17,13 @@ enum Icon {
 }
 
 pub struct Tray {
-    icon: Icon,
+    icon: Option<Icon>,
 }
 
 impl Tray {
     pub fn new() -> Self {
         Self {
-            icon: Icon::Unknown,
+            icon: None,
         }
     }
 }
@@ -76,34 +76,36 @@ impl ksni::Tray for Tray {
             LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/wifi-0.png")));
 
         match self.icon {
-            Icon::Unknown => vec![UNKNOWN_ICON.clone()],
-            Icon::Off => vec![OFF_ICON.clone()],
-            Icon::Busy => vec![BUSY_ICON.clone()],
-            Icon::Disconnected => vec![DISCONNECTED_ICON.clone()],
-            Icon::AirplaneMode => vec![AIRPLANE_MODE_ICON.clone()],
-            Icon::Limited => vec![LIMITED_ICON.clone()],
-            Icon::Vpn => vec![VPN_ICON.clone()],
-            Icon::Ethernet => vec![ETHERNET_ICON.clone()],
-            Icon::Wifi(0..=19) => vec![WIFI_0_ICON.clone()],
-            Icon::Wifi(20..=39) => vec![WIFI_25_ICON.clone()],
-            Icon::Wifi(40..=49) => vec![WIFI_50_ICON.clone()],
-            Icon::Wifi(50..=79) => vec![WIFI_75_ICON.clone()],
-            Icon::Wifi(80..=100) => vec![WIFI_100_ICON.clone()],
-            Icon::Wifi(_) => unreachable!(),
+            Some(Icon::Unknown) => vec![UNKNOWN_ICON.clone()],
+            Some(Icon::Off) => vec![OFF_ICON.clone()],
+            Some(Icon::Busy) => vec![BUSY_ICON.clone()],
+            Some(Icon::Disconnected) => vec![DISCONNECTED_ICON.clone()],
+            Some(Icon::AirplaneMode) => vec![AIRPLANE_MODE_ICON.clone()],
+            Some(Icon::Limited) => vec![LIMITED_ICON.clone()],
+            Some(Icon::Vpn) => vec![VPN_ICON.clone()],
+            Some(Icon::Ethernet) => vec![ETHERNET_ICON.clone()],
+            Some(Icon::Wifi(0..=19)) => vec![WIFI_0_ICON.clone()],
+            Some(Icon::Wifi(20..=39)) => vec![WIFI_25_ICON.clone()],
+            Some(Icon::Wifi(40..=49)) => vec![WIFI_50_ICON.clone()],
+            Some(Icon::Wifi(50..=79)) => vec![WIFI_75_ICON.clone()],
+            Some(Icon::Wifi(80..=100)) => vec![WIFI_100_ICON.clone()],
+            Some(Icon::Wifi(_)) => unreachable!(),
+            None => vec![],
         }
     }
 
     fn title(&self) -> String {
         match self.icon {
-            Icon::Unknown => "Unknown".into(),
-            Icon::Off => "Off".into(),
-            Icon::Busy => "Busy".into(),
-            Icon::Disconnected => "Disconnected".into(),
-            Icon::AirplaneMode => "Airplane Mode".into(),
-            Icon::Limited => "Limited".into(),
-            Icon::Vpn => "VPN".into(),
-            Icon::Ethernet => "Ethernet".into(),
-            Icon::Wifi(_) => "Wifi".into(),
+            Some(Icon::Unknown) => "Unknown".into(),
+            Some(Icon::Off) => "Off".into(),
+            Some(Icon::Busy) => "Busy".into(),
+            Some(Icon::Disconnected) => "Disconnected".into(),
+            Some(Icon::AirplaneMode) => "Airplane Mode".into(),
+            Some(Icon::Limited) => "Limited".into(),
+            Some(Icon::Vpn) => "VPN".into(),
+            Some(Icon::Ethernet) => "Ethernet".into(),
+            Some(Icon::Wifi(_)) => "Wifi".into(),
+            None => "Wireless".into(),
         }
     }
 
