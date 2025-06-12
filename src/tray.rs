@@ -4,11 +4,27 @@ use image::GenericImageView;
 
 use crate::APP_ID;
 
-pub struct Tray {}
+enum Icon {
+    Unknown,
+    Off,
+    Busy,
+    Disconnected,
+    AirplaneMode,
+    Limited,
+    Vpn,
+    Ethernet,
+    Wifi(u8),
+}
+
+pub struct Tray {
+    icon: Icon,
+}
 
 impl Tray {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            icon: Icon::Unknown,
+        }
     }
 }
 
@@ -18,26 +34,63 @@ impl ksni::Tray for Tray {
     }
 
     fn icon_pixmap(&self) -> Vec<ksni::Icon> {
-        static WIFI_100_ICON: LazyLock<ksni::Icon> = LazyLock::new(|| {
-            let img = image::load_from_memory_with_format(
-                include_bytes!("../assets/wifi-100.png"),
-                image::ImageFormat::Png,
-            )
-            .expect("valid image");
-            let (width, height) = img.dimensions();
-            let mut data = img.into_rgba8().into_vec();
-            assert_eq!(data.len() % 4, 0);
-            for pixel in data.chunks_exact_mut(4) {
-                pixel.rotate_right(1) // rgba to argb
-            }
-            ksni::Icon {
-                width: width as i32,
-                height: height as i32,
-                data,
-            }
+        static UNKNOWN_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/unknown.png")));
+
+        static OFF_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/wifi-off.png")));
+
+        static BUSY_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/busy.png")));
+
+        static DISCONNECTED_ICON: LazyLock<ksni::Icon> = LazyLock::new(|| {
+            get_icon_from_image_bytes(include_bytes!("../assets/disconnected.png"))
         });
 
-        vec![WIFI_100_ICON.clone()]
+        static AIRPLANE_MODE_ICON: LazyLock<ksni::Icon> = LazyLock::new(|| {
+            get_icon_from_image_bytes(include_bytes!("../assets/airplane_mode.png"))
+        });
+
+        static LIMITED_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/limited.png")));
+
+        static VPN_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/vpn.png")));
+
+        static ETHERNET_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/ethernet.png")));
+
+        static WIFI_100_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/wifi-100.png")));
+
+        static WIFI_75_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/wifi-75.png")));
+
+        static WIFI_50_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/wifi-50.png")));
+
+        static WIFI_25_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/wifi-25.png")));
+
+        static WIFI_0_ICON: LazyLock<ksni::Icon> =
+            LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/wifi-0.png")));
+
+        match self.icon {
+            Icon::Unknown => vec![UNKNOWN_ICON.clone()],
+            Icon::Off => vec![OFF_ICON.clone()],
+            Icon::Busy => vec![BUSY_ICON.clone()],
+            Icon::Disconnected => vec![DISCONNECTED_ICON.clone()],
+            Icon::AirplaneMode => vec![AIRPLANE_MODE_ICON.clone()],
+            Icon::Limited => vec![LIMITED_ICON.clone()],
+            Icon::Vpn => vec![VPN_ICON.clone()],
+            Icon::Ethernet => vec![ETHERNET_ICON.clone()],
+            Icon::Wifi(0..=19) => vec![WIFI_0_ICON.clone()],
+            Icon::Wifi(20..=39) => vec![WIFI_25_ICON.clone()],
+            Icon::Wifi(40..=49) => vec![WIFI_50_ICON.clone()],
+            Icon::Wifi(50..=79) => vec![WIFI_75_ICON.clone()],
+            Icon::Wifi(80..=100) => vec![WIFI_100_ICON.clone()],
+            Icon::Wifi(_) => unreachable!(),
+        }
     }
 
     fn title(&self) -> String {
@@ -54,5 +107,21 @@ impl ksni::Tray for Tray {
             }
             .into(),
         ]
+    }
+}
+
+fn get_icon_from_image_bytes(image_bytes: &[u8]) -> ksni::Icon {
+    let img = image::load_from_memory_with_format(image_bytes, image::ImageFormat::Png)
+        .expect("valid image");
+    let (width, height) = img.dimensions();
+    let mut data = img.into_rgba8().into_vec();
+    assert_eq!(data.len() % 4, 0);
+    for pixel in data.chunks_exact_mut(4) {
+        pixel.rotate_right(1) // rgba to argb
+    }
+    ksni::Icon {
+        width: width as i32,
+        height: height as i32,
+        data,
     }
 }
