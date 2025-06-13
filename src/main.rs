@@ -1,5 +1,6 @@
 mod app;
 mod interfaces;
+mod network;
 mod tray;
 
 use std::{fs::File, path::Path};
