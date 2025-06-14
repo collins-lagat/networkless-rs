@@ -1,3 +1,6 @@
+use std::time::Duration;
+
+use anyhow::Result;
 use ksni::Handle;
 use tokio::sync::mpsc::{Receiver, Sender};
 
@@ -5,6 +8,7 @@ use crate::tray::Tray;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
+    Tick,
     Shutdown,
 }
 
@@ -25,6 +29,9 @@ pub struct App {
 
 impl App {
     pub fn new(event_tx: Sender<Event>, action_tx: Sender<Action>) -> Self {
+        let actor = AppTicker::new(event_tx.clone());
+        tokio::spawn(async move { actor.run().await });
+
         Self {
             event_tx,
             action_tx,
@@ -60,9 +67,30 @@ impl App {
             println!("Event: {:?}", event);
 
             match event {
+                Event::Tick => {
+                    println!("Tick");
+                }
                 Event::Shutdown => break,
-                _ => {}
             }
+        }
+    }
+}
+
+struct AppTicker {
+    tx: Sender<Event>,
+}
+
+impl AppTicker {
+    fn new(tx: Sender<Event>) -> Self {
+        Self { tx }
+    }
+
+    async fn run(&self) -> Result<()> {
+        let tick_rate = Duration::from_secs(1);
+        let mut interval = tokio::time::interval(tick_rate);
+        loop {
+            interval.tick().await;
+            self.tx.send(Event::Tick).await?;
         }
     }
 }
