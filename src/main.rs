@@ -11,6 +11,7 @@ use fs2::FileExt;
 use futures::StreamExt;
 use ksni::TrayMethods;
 use log::{LevelFilter, error, info};
+use network::network_manager::NetworkManager;
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook_tokio::Signals;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
@@ -19,6 +20,7 @@ use tokio::{
     sync::mpsc::{Sender, channel},
 };
 use tray::Tray;
+use zbus::Connection;
 
 pub const APP_ID: &str = "com.collinslagat.applets.networkless";
 const LOCK_FILE: &str = "networkless.lock";
@@ -64,7 +66,10 @@ async fn main() -> Result<()> {
 
     let mut tray = Tray::new();
 
-    let app = App::new(event_tx, action_tx);
+    let connection = Connection::system().await?;
+    let network_manager = NetworkManager::new(connection).await?;
+
+    let app = App::new(event_tx, action_tx, network_manager);
 
     tray.set_app(app.clone());
 
