@@ -6,7 +6,7 @@ use super::enums::DeviceType;
 
 #[derive(Debug, Clone)]
 pub struct Device {
-    pub device: DeviceProxy<'static>,
+    device: DeviceProxy<'static>,
 }
 
 impl Device {
