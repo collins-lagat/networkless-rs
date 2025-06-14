@@ -11,6 +11,7 @@ use super::enums::NmState;
 use crate::interfaces::active::ActiveProxy;
 use crate::interfaces::{device::DeviceProxy, network_manager::NetworkManagerProxy};
 
+#[derive(Debug, Clone)]
 pub struct NetworkManager {
     connection: Connection,
     nm: NetworkManagerProxy<'static>,
