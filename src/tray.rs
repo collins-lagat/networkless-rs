@@ -283,25 +283,25 @@ impl ksni::Tray for Tray {
 
 #[derive(Debug, Clone)]
 pub struct WifiState {
-    on: bool,
-    connections: Vec<String>,
+    pub on: bool,
+    pub connections: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct WiredState {
-    on: bool,
-    speed: u8,
+    pub on: bool,
+    pub speed: u8,
 }
 
 #[derive(Debug, Clone)]
 pub struct VPNState {
-    on: bool,
-    active_connection: String,
+    pub on: bool,
+    pub active_connection: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct AirplaneModeState {
-    on: bool,
+    pub on: bool,
 }
 
 fn get_icon_from_image_bytes(image_bytes: &[u8]) -> ksni::Icon {
