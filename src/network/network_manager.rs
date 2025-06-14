@@ -22,7 +22,7 @@ impl NetworkManager {
         Ok(Self { connection, nm })
     }
 
-    pub async fn all_device(&self) -> Result<Vec<Device>> {
+    pub async fn all_devices(&self) -> Result<Vec<Device>> {
         let devices = self.nm.get_all_devices().await?;
 
         let mut out = Vec::with_capacity(devices.len());
