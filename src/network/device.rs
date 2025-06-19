@@ -27,13 +27,15 @@ impl Device {
         Ok(ActiveConnection::new(active_connection))
     }
 
-    pub async fn with_connection_and_path<F>(&self, f: F) -> Result<()>
+    pub async fn with_connection_and_path<F>(&self, f: F) -> anyhow::Result<()>
     where
         F: AsyncFnOnce(&Connection, &str) -> Result<()>,
     {
         let connection = self.device.inner().connection();
         let path = self.device.path().await?;
-        f(&connection, &path).await;
+        if let Err(e) = f(connection, path).await {
+            anyhow::bail!("Failed to run function: {}", e);
+        };
         Ok(())
     }
 }
