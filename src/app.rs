@@ -228,6 +228,7 @@ impl App {
                             break;
                         }
                     };
+
                     let futures = devices.iter().map(async |device: &Device| {
                         let device_type = match device.device_type().await {
                             Ok(device_type) => device_type,
@@ -236,21 +237,36 @@ impl App {
                                 DeviceType::Unknown
                             }
                         };
-                        matches!(device_type, DeviceType::WireGuard)
+                        (matches!(device_type, DeviceType::WireGuard), device.clone())
                     });
                     let results = join_all(futures).await;
-                    let has_wireguard_device = results.iter().any(|result| *result);
+                    let (has_wireguard_device, wireguard_device) = results
+                        .iter()
+                        .reduce(|acc, result| if result.0 { result } else { acc })
+                        .unwrap();
 
-                    if has_wireguard_device {
-                        // TODO: get on state from connection
+                    if *has_wireguard_device {
+                        let wire_guard_connection = match wireguard_device.active_connection().await
+                        {
+                            Ok(connection) => connection,
+                            Err(e) => {
+                                println!("Failed to get wireguard connection: {}", e);
+                                break;
+                            }
+                        };
+
+                        let wire_guard_connection_id = wire_guard_connection.id().await.unwrap();
+
                         tray_handle
                             .update(|tray| {
-                                tray.set_vpn_state(VPNState {
+                                tray.set_vpn_state(Some(VPNState {
                                     on: true,
-                                    active_connection: primary_connection_id,
-                                });
+                                    active_connection: wire_guard_connection_id.clone(),
+                                }));
                             })
                             .await;
+                    } else {
+                        tray_handle.update(|tray| tray.set_vpn_state(None)).await;
                     }
 
                     continue;
