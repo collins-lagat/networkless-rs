@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{ops::ControlFlow, time::Duration};
 
 use anyhow::Result;
 use futures::future::join_all;
@@ -6,12 +6,13 @@ use ksni::Handle;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::{
+    interfaces::{access_point::AccessPointProxy, devices::wireless::WirelessProxy},
     network::{
         device::Device,
         enums::{DeviceType, NmConnectivityState, NmState},
         network_manager::NetworkManager,
     },
-    tray::{Icon, Tray},
+    tray::{Icon, Tray, VPNState},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -80,74 +81,89 @@ impl App {
         while let Some(event) = event_rx.recv().await {
             match event {
                 Event::Tick => {
+                    let update_tray_icon_helper = async |icon: Icon| {
+                        tray_handle
+                            .update(move |tray| {
+                                tray.set_icon(icon);
+                            })
+                            .await;
+                    };
+
                     let state = match self.network_manager.state().await {
                         Ok(state) => state,
                         Err(e) => {
                             println!("Failed to get state: {}", e);
-                            continue;
+                            break;
                         }
                     };
+
+                    let is_airplane_mode = match self.network_manager.airplane_mode_enabled().await
+                    {
+                        Ok(is_airplane_mode) => is_airplane_mode,
+                        Err(e) => {
+                            println!("Failed to get airplane mode: {}", e);
+                            break;
+                        }
+                    };
+
+                    if is_airplane_mode {
+                        update_tray_icon_helper(Icon::AirplaneMode).await;
+                        break;
+                    }
 
                     match state {
                         NmState::Asleep => {
-                            // check airplane mode, otherwise show sleep icon
-                            continue;
+                            update_tray_icon_helper(Icon::Off).await;
+                            break;
                         }
                         NmState::Disconnected => {
-                            // check airplane mode, otherwise show disconnected icon
-                            continue;
-                        }
-                        NmState::Disconnecting | NmState::Connecting => {
-                            // show network busy icon then continue
-                            continue;
+                            update_tray_icon_helper(Icon::Disconnected).await;
+                            break;
                         }
                         _ => {}
                     };
-
                     let connectivity = match self.network_manager.connectivity().await {
                         Ok(connectivity) => connectivity,
                         Err(e) => {
                             println!("Failed to get connectivity: {}", e);
-                            continue;
+                            break;
                         }
                     };
-
                     match connectivity {
                         NmConnectivityState::Unknown => {
-                            // show unknown connectivity icon then continue
-                            continue;
+                            update_tray_icon_helper(Icon::Unknown).await;
+                            break;
                         }
                         NmConnectivityState::None => {
-                            // show no connectivity icon then continue
-                            continue;
+                            update_tray_icon_helper(Icon::Disconnected).await;
+                            break;
                         }
                         NmConnectivityState::Portal => {
                             todo!("handle portal");
                         }
                         NmConnectivityState::Loss => {
-                            // show limited connectivity icon then continue
-                            continue;
+                            update_tray_icon_helper(Icon::Limited).await;
+                            break;
                         }
                         _ => {}
                     }
-
                     let primary_connection = match self.network_manager.primary_connection().await {
                         Ok(primary_connection) => primary_connection,
                         Err(e) => {
                             println!("Failed to get primary connection: {}", e);
-                            continue;
+                            break;
                         }
                     };
+
+                    let primary_connection_id = primary_connection.id().await.unwrap();
 
                     let devices = match primary_connection.devices().await {
                         Ok(devices) => devices,
                         Err(e) => {
                             println!("Failed to get devices: {}", e);
-                            continue;
+                            break;
                         }
                     };
-
-                    let device_icons: Vec<Icon> = Vec::with_capacity(2);
 
                     for device in devices {
                         let device_type = match device.device_type().await {
@@ -160,16 +176,41 @@ impl App {
 
                         match device_type {
                             DeviceType::Wifi => {
-                                // TODO: get device path
-                                // TODO: get access point from wireless device
-                                // TODO: get strength from wireless device
-                                // TODO: show wifi icon
+                                device
+                                    .with_connection_and_path(async |connection, path| {
+                                        let wireless_device = WirelessProxy::builder(connection)
+                                            .path(path)
+                                            .unwrap()
+                                            .build()
+                                            .await
+                                            .unwrap();
+
+                                        let active_access_point_path =
+                                            wireless_device.active_access_point().await.unwrap();
+
+                                        let active_access_point =
+                                            AccessPointProxy::builder(connection)
+                                                .path(active_access_point_path)
+                                                .unwrap()
+                                                .build()
+                                                .await
+                                                .unwrap();
+
+                                        let strength =
+                                            active_access_point.strength().await.unwrap();
+
+                                        update_tray_icon_helper(Icon::Wifi(strength)).await;
+
+                                        Ok(())
+                                    })
+                                    .await
+                                    .unwrap();
                             }
                             DeviceType::Ethernet => {
-                                // TODO: show ethernet icon
+                                update_tray_icon_helper(Icon::Ethernet).await;
                             }
                             DeviceType::TunTap => {
-                                // TODO: show tuntap icon
+                                update_tray_icon_helper(Icon::Tun).await;
                             }
                             DeviceType::Bluetooth => {
                                 todo!("support bluetooth in future");
@@ -180,34 +221,34 @@ impl App {
                             _ => {}
                         }
                     }
-
                     let devices = match self.network_manager.all_devices().await {
                         Ok(devices) => devices,
                         Err(e) => {
                             println!("Failed to get devices: {}", e);
-                            continue;
+                            break;
                         }
                     };
-
                     let futures = devices.iter().map(async |device: &Device| {
-                        let device_type = match device.device_type().await {
-                            Ok(device_type) => device_type,
-                            Err(e) => {
-                                println!("Failed to get device type: {}", e);
-                                return false;
-                            }
-                        };
+                        let device_type = device.device_type().await.unwrap();
 
                         matches!(device_type, DeviceType::WireGuard)
                     });
-
                     let results = join_all(futures).await;
-
                     let has_wireguard_device = results.iter().any(|result| *result);
 
                     if has_wireguard_device {
-                        // TODO: show wireguard icon
+                        // TODO: get on state from connection
+                        tray_handle
+                            .update(|tray| {
+                                tray.set_vpn_state(VPNState {
+                                    on: true,
+                                    active_connection: primary_connection_id,
+                                });
+                            })
+                            .await;
                     }
+
+                    continue;
                 }
                 Event::Shutdown => break,
             }
