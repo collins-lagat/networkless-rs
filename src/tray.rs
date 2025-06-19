@@ -222,7 +222,7 @@ impl ksni::Tray for Tray {
                         }
                         .into(),
                         StandardItem {
-                            label: wired_state.speed.to_string(),
+                            label: format!("{} Mbps", wired_state.speed),
                             ..Default::default()
                         }
                         .into(),
@@ -290,7 +290,7 @@ pub struct WifiState {
 #[derive(Debug, Clone)]
 pub struct WiredState {
     pub on: bool,
-    pub speed: u8,
+    pub speed: u32,
 }
 
 #[derive(Debug, Clone)]

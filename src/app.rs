@@ -6,13 +6,16 @@ use ksni::Handle;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::{
-    interfaces::{access_point::AccessPointProxy, devices::wireless::WirelessProxy},
+    interfaces::{
+        access_point::AccessPointProxy,
+        devices::{wired::WiredProxy, wireless::WirelessProxy},
+    },
     network::{
         device::Device,
         enums::{DeviceType, NmConnectivityState, NmState},
         network_manager::NetworkManager,
     },
-    tray::{Icon, Tray, VPNState},
+    tray::{Icon, Tray, VPNState, WiredState},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -208,7 +211,33 @@ impl App {
                         .unwrap();
                 }
                 DeviceType::Ethernet => {
-                    update_tray_icon_helper(Icon::Ethernet).await;
+                    device
+                        .with_connection_and_path(async |connection, path| {
+                            let ethernet_builder = match WiredProxy::builder(connection).path(path)
+                            {
+                                Ok(builder) => builder,
+                                Err(e) => {
+                                    println!("Failed to get ethernet device: {}", e);
+                                    return Err(e);
+                                }
+                            };
+
+                            let ethernet_device = ethernet_builder.build().await.unwrap();
+
+                            let speed = ethernet_device.speed().await.unwrap();
+
+                            update_tray_icon_helper(Icon::Ethernet).await;
+
+                            tray_handle
+                                .update(|tray| {
+                                    tray.set_wired_state(Some(WiredState { on: true, speed }))
+                                })
+                                .await;
+
+                            Ok(())
+                        })
+                        .await
+                        .unwrap();
                 }
                 DeviceType::TunTap => {
                     update_tray_icon_helper(Icon::Tun).await;
