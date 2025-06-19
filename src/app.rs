@@ -229,8 +229,13 @@ impl App {
                         }
                     };
                     let futures = devices.iter().map(async |device: &Device| {
-                        let device_type = device.device_type().await.unwrap();
-
+                        let device_type = match device.device_type().await {
+                            Ok(device_type) => device_type,
+                            Err(e) => {
+                                println!("Failed to get device type: {}", e);
+                                DeviceType::Unknown
+                            }
+                        };
                         matches!(device_type, DeviceType::WireGuard)
                     });
                     let results = join_all(futures).await;
