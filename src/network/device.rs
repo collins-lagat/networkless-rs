@@ -20,7 +20,7 @@ impl Device {
 
     pub async fn active_connection(&self) -> Result<ActiveConnection> {
         let active_connection = self.device.active_connection().await?;
-        let active_connection = ActiveProxy::builder(&self.device.inner().connection())
+        let active_connection = ActiveProxy::builder(self.device.inner().connection())
             .path(active_connection)?
             .build()
             .await?;
