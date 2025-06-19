@@ -32,7 +32,7 @@ impl Device {
         F: AsyncFnOnce(&Connection, &str) -> Result<()>,
     {
         let connection = self.device.inner().connection();
-        let path = self.device.path().await?;
+        let path = self.device.inner().path();
         if let Err(e) = f(connection, path).await {
             anyhow::bail!("Failed to run function: {}", e);
         };
