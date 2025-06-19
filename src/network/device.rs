@@ -1,4 +1,4 @@
-use zbus::Result;
+use zbus::{Connection, Result};
 
 use crate::interfaces::device::DeviceProxy;
 
@@ -16,5 +16,15 @@ impl Device {
 
     pub async fn device_type(&self) -> Result<DeviceType> {
         self.device.device_type().await.map(DeviceType::from)
+    }
+
+    pub async fn with_connection_and_path<F>(&self, f: F) -> Result<()>
+    where
+        F: AsyncFnOnce(&Connection, &str) -> Result<()>,
+    {
+        let connection = self.device.inner().connection();
+        let path = self.device.path().await?;
+        f(&connection, &path).await;
+        Ok(())
     }
 }
