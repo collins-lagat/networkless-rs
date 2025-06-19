@@ -1,8 +1,8 @@
 use zbus::{Connection, Result};
 
-use crate::interfaces::device::DeviceProxy;
+use crate::interfaces::{active::ActiveProxy, device::DeviceProxy};
 
-use super::enums::DeviceType;
+use super::{active_connection::ActiveConnection, enums::DeviceType};
 
 #[derive(Debug, Clone)]
 pub struct Device {
@@ -16,6 +16,15 @@ impl Device {
 
     pub async fn device_type(&self) -> Result<DeviceType> {
         self.device.device_type().await.map(DeviceType::from)
+    }
+
+    pub async fn active_connection(&self) -> Result<ActiveConnection> {
+        let active_connection = self.device.active_connection().await?;
+        let active_connection = ActiveProxy::builder(&self.device.inner().connection())
+            .path(active_connection)?
+            .build()
+            .await?;
+        Ok(ActiveConnection::new(active_connection))
     }
 
     pub async fn with_connection_and_path<F>(&self, f: F) -> Result<()>
