@@ -161,7 +161,6 @@ impl App {
                 return ControlFlow::Break(());
             }
         };
-        let primary_connection_id = primary_connection.id().await.unwrap();
         let devices = match primary_connection.devices().await {
             Ok(devices) => devices,
             Err(e) => {
