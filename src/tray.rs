@@ -50,16 +50,16 @@ impl Tray {
         self.icon = Some(icon);
     }
 
-    pub fn set_wifi_state(&mut self, wifi_state: WifiState) {
-        self.wifi_state = Some(wifi_state);
+    pub fn set_wifi_state(&mut self, wifi_state: Option<WifiState>) {
+        self.wifi_state = wifi_state;
     }
 
-    pub fn set_wired_state(&mut self, wired_state: WiredState) {
-        self.wired_state = Some(wired_state);
+    pub fn set_wired_state(&mut self, wired_state: Option<WiredState>) {
+        self.wired_state = wired_state;
     }
 
-    pub fn set_vpn_state(&mut self, vpn_state: VPNState) {
-        self.vpn_state = Some(vpn_state);
+    pub fn set_vpn_state(&mut self, vpn_state: Option<VPNState>) {
+        self.vpn_state = vpn_state;
     }
 }
 
@@ -69,7 +69,7 @@ impl ksni::Tray for Tray {
     }
 
     fn icon_pixmap(&self) -> Vec<ksni::Icon> {
-        let mut icons = vec![];
+        let mut icons = Vec::with_capacity(2);
 
         static UNKNOWN_ICON: LazyLock<ksni::Icon> =
             LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../assets/unknown.png")));
