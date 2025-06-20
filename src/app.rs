@@ -76,7 +76,16 @@ impl App {
         mut action_rx: Receiver<Action>,
         tray_handle: Handle<Tray>,
     ) {
-        let action_tray_handle = tray_handle.clone();
+        let app = self.clone();
+        tokio::spawn(async move {
+            app.network_manager
+                .listening_to_state_changes(async |_| {
+                    app.send_event(Event::Tick).await;
+                })
+                .await
+                .unwrap();
+        });
+
         tokio::spawn(async move {
             while let Some(event) = action_rx.recv().await {
                 println!("Action: {:?}", event);
