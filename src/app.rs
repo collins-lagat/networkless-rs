@@ -18,6 +18,8 @@ use crate::{
     tray::{Icon, Tray, VPNState, WiredState},
 };
 
+const TICK_RATE_SECS: u64 = 600;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
     Tick,
@@ -310,7 +312,7 @@ impl AppTicker {
     }
 
     async fn run(&self) -> Result<()> {
-        let tick_rate = Duration::from_secs(1);
+        let tick_rate = Duration::from_secs(TICK_RATE_SECS);
         let mut interval = tokio::time::interval(tick_rate);
         loop {
             interval.tick().await;
