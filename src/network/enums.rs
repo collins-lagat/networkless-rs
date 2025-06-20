@@ -79,3 +79,41 @@ impl From<u32> for DeviceType {
         }
     }
 }
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeviceState {
+    Unmanaged,
+    Unavailable,
+    Disconnected,
+    Prepare,
+    Config,
+    NeedAuth,
+    IpConfig,
+    IpCheck,
+    Secondaries,
+    Activated,
+    Deactivating,
+    Failed,
+    #[default]
+    Unknown,
+}
+
+impl From<u32> for DeviceState {
+    fn from(device_state: u32) -> Self {
+        match device_state {
+            10 => DeviceState::Unmanaged,
+            20 => DeviceState::Unavailable,
+            30 => DeviceState::Disconnected,
+            40 => DeviceState::Prepare,
+            50 => DeviceState::Config,
+            60 => DeviceState::NeedAuth,
+            70 => DeviceState::IpConfig,
+            80 => DeviceState::IpCheck,
+            90 => DeviceState::Secondaries,
+            100 => DeviceState::Activated,
+            110 => DeviceState::Deactivating,
+            120 => DeviceState::Failed,
+            _ => DeviceState::Unknown,
+        }
+    }
+}
