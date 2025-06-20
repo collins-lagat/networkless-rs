@@ -1,5 +1,6 @@
 use anyhow::Result;
 use anyhow::bail;
+use futures::StreamExt;
 use tokio::process::Command;
 use zbus::Connection;
 use zbus::Result as ZbusResult;
@@ -9,6 +10,7 @@ use super::device::Device;
 use super::enums::NmConnectivityState;
 use super::enums::NmState;
 use crate::interfaces::active::ActiveProxy;
+use crate::interfaces::network_manager::StateChanged;
 use crate::interfaces::{device::DeviceProxy, network_manager::NetworkManagerProxy};
 
 #[derive(Debug, Clone)]
@@ -21,6 +23,17 @@ impl NetworkManager {
     pub async fn new(connection: Connection) -> Result<Self> {
         let nm = NetworkManagerProxy::new(&connection).await?;
         Ok(Self { connection, nm })
+    }
+
+    pub async fn listening_to_state_changes<F>(&self, f: F) -> Result<()>
+    where
+        F: AsyncFnOnce(StateChanged) -> () + Send + 'static + Copy,
+    {
+        let mut stream = self.nm.receive_state_changed_signal().await?;
+        while let Some(state) = stream.next().await {
+            f(state).await;
+        }
+        Ok(())
     }
 
     pub async fn all_devices(&self) -> Result<Vec<Device>> {
