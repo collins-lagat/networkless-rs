@@ -27,7 +27,7 @@ impl NetworkManager {
 
     pub async fn listening_to_state_changes<F>(&self, f: F) -> Result<()>
     where
-        F: AsyncFnOnce(StateChanged) -> () + Send + 'static + Copy,
+        F: AsyncFnOnce(StateChanged) -> () + Send + Copy,
     {
         let mut stream = self.nm.receive_state_changed_signal().await?;
         while let Some(state) = stream.next().await {
