@@ -1,9 +1,14 @@
-use zbus::{Connection, Result};
+use zbus::{Connection, Result, zvariant::ObjectPath};
 
-use crate::interfaces::{active::ActiveProxy, device::DeviceProxy};
+use crate::interfaces::{
+    active::ActiveProxy,
+    device::DeviceProxy,
+    devices::{wire_guard::WireGuardProxy, wired::WiredProxy, wireless::WirelessProxy},
+};
 
 use super::{
     active_connection::ActiveConnection,
+    devices::{SpecificDevice, WirGuard, Wired, Wireless},
     enums::{DeviceState, DeviceType},
 };
 
@@ -43,5 +48,47 @@ impl Device {
         let path = self.device.inner().path().clone();
         let r = f(connection, path).await;
         Some(r)
+    }
+
+    pub async fn to_specific_device(&self) -> Option<SpecificDevice> {
+        match self.device_type().await.unwrap() {
+            DeviceType::Wifi => {
+                let connection = self.device.inner().connection();
+                let path = self.device.inner().path().clone();
+                let wireless_device = WirelessProxy::builder(connection)
+                    .path(path)
+                    .unwrap()
+                    .build()
+                    .await
+                    .unwrap();
+                let device = Wireless::new(wireless_device).await;
+                Some(SpecificDevice::Wireless(device))
+            }
+            DeviceType::Ethernet => {
+                let connection = self.device.inner().connection();
+                let path = self.device.inner().path().clone();
+                let wired_device = WiredProxy::builder(connection)
+                    .path(path)
+                    .unwrap()
+                    .build()
+                    .await
+                    .unwrap();
+                let device = Wired::new(wired_device).await;
+                Some(SpecificDevice::Wired(device))
+            }
+            DeviceType::WireGuard => {
+                let connection = self.device.inner().connection();
+                let path = self.device.inner().path().clone();
+                let wire_guard_device = WireGuardProxy::builder(connection)
+                    .path(path)
+                    .unwrap()
+                    .build()
+                    .await
+                    .unwrap();
+                let device = WirGuard::new(wire_guard_device).await;
+                Some(SpecificDevice::WirGuard(device))
+            }
+            _ => None,
+        }
     }
 }
