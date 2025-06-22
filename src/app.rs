@@ -193,7 +193,7 @@ impl App {
 
             match device_type {
                 DeviceType::Wifi => {
-                    device
+                    let active_access_point = device
                         .with_connection_and_path(async |connection, path| {
                             let wireless_device = WirelessProxy::builder(connection)
                                 .path(path)
@@ -205,50 +205,39 @@ impl App {
                             let active_access_point_path =
                                 wireless_device.active_access_point().await.unwrap();
 
-                            let active_access_point = AccessPointProxy::builder(connection)
+                            AccessPointProxy::builder(connection)
                                 .path(active_access_point_path)
                                 .unwrap()
                                 .build()
                                 .await
-                                .unwrap();
-
-                            let strength = active_access_point.strength().await.unwrap();
-
-                            update_tray_icon_helper(Icon::Wifi(strength)).await;
-
-                            Ok(())
+                                .unwrap()
                         })
                         .await
                         .unwrap();
+
+                    let strength = active_access_point.strength().await.unwrap();
+
+                    update_tray_icon_helper(Icon::Wifi(strength)).await;
                 }
                 DeviceType::Ethernet => {
-                    device
+                    let ethernet_device = device
                         .with_connection_and_path(async |connection, path| {
-                            let ethernet_builder = match WiredProxy::builder(connection).path(path)
-                            {
-                                Ok(builder) => builder,
-                                Err(e) => {
-                                    println!("Failed to get ethernet device: {}", e);
-                                    return Err(e);
-                                }
-                            };
-
-                            let ethernet_device = ethernet_builder.build().await.unwrap();
-
-                            let speed = ethernet_device.speed().await.unwrap();
-
-                            update_tray_icon_helper(Icon::Ethernet).await;
-
-                            tray_handle
-                                .update(|tray| {
-                                    tray.set_wired_state(Some(WiredState { on: true, speed }))
-                                })
-                                .await;
-
-                            Ok(())
+                            WiredProxy::builder(connection)
+                                .path(path)
+                                .unwrap()
+                                .build()
+                                .await
+                                .unwrap()
                         })
                         .await
                         .unwrap();
+                    let speed = ethernet_device.speed().await.unwrap();
+
+                    update_tray_icon_helper(Icon::Ethernet).await;
+
+                    tray_handle
+                        .update(|tray| tray.set_wired_state(Some(WiredState { on: true, speed })))
+                        .await;
                 }
                 DeviceType::TunTap => {
                     update_tray_icon_helper(Icon::Tun).await;

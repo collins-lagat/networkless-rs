@@ -34,15 +34,14 @@ impl Device {
         Ok(ActiveConnection::new(active_connection))
     }
 
-    pub async fn with_connection_and_path<F>(&self, f: F) -> anyhow::Result<()>
+    pub async fn with_connection_and_path<'a, F, Fut, R>(&'a self, f: F) -> Option<R>
     where
-        F: AsyncFnOnce(&Connection, &str) -> Result<()>,
+        F: FnOnce(&'a Connection, ObjectPath<'a>) -> Fut,
+        Fut: Future<Output = R> + 'a,
     {
         let connection = self.device.inner().connection();
-        let path = self.device.inner().path();
-        if let Err(e) = f(connection, path).await {
-            anyhow::bail!("Failed to run function: {}", e);
-        };
-        Ok(())
+        let path = self.device.inner().path().clone();
+        let r = f(connection, path).await;
+        Some(r)
     }
 }
