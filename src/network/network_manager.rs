@@ -101,6 +101,11 @@ impl NetworkManager {
         Ok(self.nm.wireless_enabled().await?)
     }
 
+    pub async fn set_wifi_enabled(&self, enabled: bool) -> Result<()> {
+        self.nm.set_wireless_enabled(enabled).await?;
+        Ok(())
+    }
+
     pub async fn bluetooth_enabled(&self) -> Result<bool> {
         let cmd = Command::new("rfkill")
             .arg("list")
