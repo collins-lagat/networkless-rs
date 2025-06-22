@@ -17,7 +17,7 @@ use zbus::proxy;
     interface = "org.freedesktop.NetworkManager.Device.Tun",
     default_service = "org.freedesktop.NetworkManager"
 )]
-pub trait TunDevice {
+pub trait Tun {
     /// Group property
     #[zbus(property)]
     fn group(&self) -> zbus::Result<i64>;
