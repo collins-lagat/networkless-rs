@@ -4,3 +4,5 @@ pub mod device;
 pub mod devices;
 pub mod enums;
 pub mod network_manager;
+pub mod settings;
+

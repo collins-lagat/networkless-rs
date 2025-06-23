@@ -2,6 +2,7 @@ use zbus::Result;
 
 use crate::interfaces::access_point::AccessPointProxy;
 
+#[derive(Clone, Debug)]
 pub struct AccessPoint {
     id: Option<String>,
     access_point: AccessPointProxy<'static>,

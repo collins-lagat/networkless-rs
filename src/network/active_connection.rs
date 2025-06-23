@@ -4,6 +4,7 @@ use crate::interfaces::{active::ActiveProxy, device::DeviceProxy};
 
 use super::device::Device;
 
+#[derive(Debug, Clone)]
 pub struct ActiveConnection {
     active_connection: ActiveProxy<'static>,
 }

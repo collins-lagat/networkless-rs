@@ -2,14 +2,12 @@ use zbus::Result;
 
 use crate::interfaces::{
     access_point::AccessPointProxy,
-    devices::{
-        generic::GenericProxy, wire_guard::WireGuardProxy, wired::WiredProxy,
-        wireless::WirelessProxy,
-    },
+    devices::{wire_guard::WireGuardProxy, wired::WiredProxy, wireless::WirelessProxy},
 };
 
 use super::access_point::AccessPoint;
 
+#[derive(Debug, Clone)]
 pub struct Wireless {
     wireless_device: WirelessProxy<'static>,
 }
@@ -17,6 +15,15 @@ pub struct Wireless {
 impl Wireless {
     pub async fn new(wireless_device: WirelessProxy<'static>) -> Self {
         Self { wireless_device }
+    }
+
+    pub async fn active_access_point(&self) -> Result<AccessPoint> {
+        let ap = self.wireless_device.active_access_point().await?;
+        let ap = AccessPointProxy::builder(self.wireless_device.inner().connection())
+            .path(ap)?
+            .build()
+            .await?;
+        Ok(AccessPoint::new(ap))
     }
 
     pub async fn access_points(&self) -> Result<Vec<AccessPoint>> {
@@ -33,6 +40,7 @@ impl Wireless {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Wired {
     wired_device: WiredProxy<'static>,
 }
@@ -48,6 +56,7 @@ impl Wired {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct WirGuard {
     wire_guard_device: WireGuardProxy<'static>,
 }

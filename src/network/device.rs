@@ -4,12 +4,14 @@ use crate::interfaces::{
     active::ActiveProxy,
     device::DeviceProxy,
     devices::{wire_guard::WireGuardProxy, wired::WiredProxy, wireless::WirelessProxy},
+    settings::connection::ConnectionProxy,
 };
 
 use super::{
     active_connection::ActiveConnection,
     devices::{SpecificDevice, WirGuard, Wired, Wireless},
     enums::{DeviceState, DeviceType},
+    settings::ConnectionSetting,
 };
 
 #[derive(Debug, Clone)]
@@ -37,6 +39,22 @@ impl Device {
             .build()
             .await?;
         Ok(ActiveConnection::new(active_connection))
+    }
+
+    pub async fn available_connections(&self) -> Result<Vec<ConnectionSetting>> {
+        let configured_connections = self.device.available_connections().await.unwrap();
+
+        let mut out = Vec::with_capacity(configured_connections.len());
+
+        for conn in configured_connections {
+            let setting = ConnectionProxy::builder(self.device.inner().connection())
+                .path(conn)?
+                .build()
+                .await?;
+            out.push(ConnectionSetting::new(setting));
+        }
+
+        Ok(out)
     }
 
     pub async fn with_connection_and_path<'a, F, Fut, R>(&'a self, f: F) -> Option<R>
