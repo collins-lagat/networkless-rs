@@ -80,6 +80,22 @@ impl From<u32> for DeviceType {
     }
 }
 
+// Values from https://github.com/travier/nmstate/blob/47c6092388784bf0edb86fb05c4c9bed891f9fdc/rust/src/libnm_dbus/device.rs#L418
+impl From<String> for DeviceType {
+    fn from(device_type: String) -> Self {
+        match &device_type[..] {
+            "802-3-ethernet" => DeviceType::Ethernet,
+            "802-11-wireless" => DeviceType::Wifi,
+            "bluetooth" => DeviceType::Bluetooth,
+            "modem" => DeviceType::Modem,
+            "generic" => DeviceType::Generic,
+            "tun" => DeviceType::TunTap,
+            "wireguard" => DeviceType::WireGuard,
+            _ => DeviceType::Unknown,
+        }
+    }
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeviceState {
     Unmanaged,

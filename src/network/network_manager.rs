@@ -7,6 +7,7 @@ use zbus::Result as ZbusResult;
 
 use super::active_connection::ActiveConnection;
 use super::device::Device;
+use super::enums::DeviceType;
 use super::enums::NmConnectivityState;
 use super::enums::NmState;
 use crate::interfaces::active::ActiveProxy;
@@ -67,6 +68,13 @@ impl NetworkManager {
             .build()
             .await?;
         Ok(ActiveConnection::new(primary_connection))
+    }
+
+    pub async fn primary_connection_type(&self) -> ZbusResult<DeviceType> {
+        self.nm
+            .primary_connection_type()
+            .await
+            .map(DeviceType::from)
     }
 
     pub async fn check_connectivity(&self) -> Result<()> {

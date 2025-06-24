@@ -2,7 +2,7 @@ use zbus::Result;
 
 use crate::interfaces::{active::ActiveProxy, device::DeviceProxy};
 
-use super::device::Device;
+use super::{device::Device, enums::DeviceType};
 
 #[derive(Debug, Clone)]
 pub struct ActiveConnection {
@@ -16,6 +16,10 @@ impl ActiveConnection {
 
     pub async fn id(&self) -> Result<String> {
         self.active_connection.id().await
+    }
+
+    pub async fn device_type(&self) -> Result<DeviceType> {
+        self.active_connection.type_().await.map(DeviceType::from)
     }
 
     pub async fn devices(&self) -> Result<Vec<Device>> {
