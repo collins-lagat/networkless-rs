@@ -2,6 +2,7 @@ mod app;
 mod interfaces;
 mod network;
 mod tray;
+mod trays;
 
 use std::{fs::File, path::Path};
 
