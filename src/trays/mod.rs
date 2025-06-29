@@ -119,17 +119,17 @@ impl TrayManager {
     }
 
     async fn update_vpn(&mut self, state: VPNState) {
-        if self.vpn_tray_handle.is_none() {
-            self.create_vpn_tray().await;
-        }
-
-        if let Some(vpn_tray_handle) = &mut self.vpn_tray_handle {
-            vpn_tray_handle
-                .update(|_tray| {
-                    todo!("update vpn tray");
-                })
-                .await;
-        }
+        // if self.vpn_tray_handle.is_none() {
+        //     self.create_vpn_tray().await;
+        // }
+        //
+        // if let Some(vpn_tray_handle) = &mut self.vpn_tray_handle {
+        //     vpn_tray_handle
+        //         .update(|_tray| {
+        //             todo!("update vpn tray");
+        //         })
+        //         .await;
+        // }
 
         if self.network_tray_handle.is_none() {
             self.create_network_tray().await;
@@ -145,17 +145,17 @@ impl TrayManager {
     }
 
     async fn update_airplane_mode(&mut self, state: AirplaneModeState) {
-        if self.airplane_mode_tray_handle.is_none() {
-            self.create_airplane_mode_tray().await;
-        }
-
-        if let Some(airplane_mode_tray_handle) = &mut self.airplane_mode_tray_handle {
-            airplane_mode_tray_handle
-                .update(|_tray| {
-                    todo!("update airplane mode tray");
-                })
-                .await;
-        }
+        // if self.airplane_mode_tray_handle.is_none() {
+        //     self.create_airplane_mode_tray().await;
+        // }
+        //
+        // if let Some(airplane_mode_tray_handle) = &mut self.airplane_mode_tray_handle {
+        //     airplane_mode_tray_handle
+        //         .update(|_tray| {
+        //             todo!("update airplane mode tray");
+        //         })
+        //         .await;
+        // }
 
         if self.network_tray_handle.is_none() {
             self.create_network_tray().await;
