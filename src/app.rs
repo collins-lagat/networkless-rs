@@ -131,6 +131,8 @@ impl App {
             }
         };
 
+        info!("State: {:?}", state);
+
         let is_airplane_mode = match self.network_manager.airplane_mode_enabled().await {
             Ok(is_airplane_mode) => is_airplane_mode,
             Err(e) => {
@@ -179,6 +181,8 @@ impl App {
             }
         };
 
+        info!("Connectivity: {:?}", connectivity);
+
         match connectivity {
             NmConnectivityState::Unknown => {
                 tray_manager.update(TrayUpdate::Icon(Icon::Unknown)).await;
@@ -207,6 +211,8 @@ impl App {
                 return ControlFlow::Break(());
             }
         };
+
+        info!("Primary connection: {:?}", primary_connection.id().await);
 
         let devices = match primary_connection.devices().await {
             Ok(devices) => devices,
