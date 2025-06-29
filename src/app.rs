@@ -249,7 +249,7 @@ impl App {
             }
         }
 
-        let devices = match self.network_manager.all_devices().await {
+        let devices = match network_manager.devices().await {
             Ok(devices) => devices,
             Err(e) => {
                 println!("Failed to get devices: {}", e);

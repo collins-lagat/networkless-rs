@@ -61,8 +61,8 @@ impl NetworkManager {
         Ok(())
     }
 
-    pub async fn all_devices(&self) -> Result<Vec<Device>> {
-        let devices = self.nm.get_all_devices().await?;
+    pub async fn devices(&self) -> Result<Vec<Device>> {
+        let devices = self.nm.get_devices().await?;
 
         let mut out = Vec::with_capacity(devices.len());
 
