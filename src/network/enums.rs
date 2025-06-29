@@ -133,3 +133,25 @@ impl From<u32> for DeviceState {
         }
     }
 }
+
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActiveConnectionState {
+    #[default]
+    Unknown,
+    Activating,
+    Activated,
+    Deactivating,
+    Deactivated,
+}
+
+impl From<u32> for ActiveConnectionState {
+    fn from(device_state: u32) -> Self {
+        match device_state {
+            1 => ActiveConnectionState::Activating,
+            2 => ActiveConnectionState::Activated,
+            3 => ActiveConnectionState::Deactivating,
+            4 => ActiveConnectionState::Deactivated,
+            _ => ActiveConnectionState::Unknown,
+        }
+    }
+}

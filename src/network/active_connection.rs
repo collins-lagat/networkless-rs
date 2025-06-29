@@ -1,8 +1,16 @@
+use futures::StreamExt;
+use log::info;
 use zbus::Result;
 
-use crate::interfaces::{active::ActiveProxy, device::DeviceProxy};
+use crate::interfaces::{
+    active::{ActiveProxy, StateChanged},
+    device::DeviceProxy,
+};
 
-use super::{device::Device, enums::DeviceType};
+use super::{
+    device::Device,
+    enums::{ActiveConnectionState, DeviceType},
+};
 
 #[derive(Debug, Clone)]
 pub struct ActiveConnection {
@@ -16,6 +24,13 @@ impl ActiveConnection {
 
     pub async fn id(&self) -> Result<String> {
         self.active_connection.id().await
+    }
+
+    pub async fn state(&self) -> Result<ActiveConnectionState> {
+        self.active_connection
+            .state()
+            .await
+            .map(ActiveConnectionState::from)
     }
 
     // pub async fn device_type(&self) -> Result<DeviceType> {
@@ -36,5 +51,20 @@ impl ActiveConnection {
         }
 
         Ok(out)
+    }
+
+    pub async fn listening_to_state_changes<F>(&self, f: F) -> Result<()>
+    where
+        F: AsyncFnOnce(StateChanged) -> () + Send + Copy,
+    {
+        let mut stream = self
+            .active_connection
+            .receive_state_changed_signal()
+            .await?;
+        while let Some(state) = stream.next().await {
+            info!("Active Connection State changed");
+            f(state).await;
+        }
+        Ok(())
     }
 }

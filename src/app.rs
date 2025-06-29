@@ -95,6 +95,17 @@ impl App {
                 .unwrap();
         });
 
+        let app = self.clone();
+        tokio::spawn(async move {
+            let primary_connection = app.network_manager.primary_connection().await.unwrap();
+            primary_connection
+                .listening_to_state_changes(async |_| {
+                    app.send_event(Event::Update).await;
+                })
+                .await
+                .unwrap();
+        });
+
         tokio::spawn(async move {
             while let Some(event) = action_rx.recv().await {
                 println!("Action: {:?}", event);
