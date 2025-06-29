@@ -9,7 +9,7 @@ use crate::interfaces::{
 
 use super::{
     active_connection::ActiveConnection,
-    devices::{SpecificDevice, WirGuard, Wired, Wireless},
+    devices::{SpecificDevice, WireGuard, Wired, Wireless},
     enums::{DeviceState, DeviceType},
     settings::ConnectionSetting,
 };
@@ -103,8 +103,8 @@ impl Device {
                     .build()
                     .await
                     .unwrap();
-                let device = WirGuard::new(wire_guard_device).await;
-                Some(SpecificDevice::WirGuard(device))
+                let device = WireGuard::new(wire_guard_device).await;
+                Some(SpecificDevice::WireGuard(device))
             }
             _ => None,
         }

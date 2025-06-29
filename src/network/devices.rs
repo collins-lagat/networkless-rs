@@ -51,17 +51,17 @@ impl Wired {
     }
 
     pub async fn speed(&self) -> Result<String> {
-        let speed = format!("{:?} Mbps", self.wired_device.speed().await);
+        let speed = format!("{:?} Mbps", self.wired_device.speed().await.unwrap());
         Ok(speed)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct WirGuard {
+pub struct WireGuard {
     wire_guard_device: WireGuardProxy<'static>,
 }
 
-impl WirGuard {
+impl WireGuard {
     pub async fn new(wire_guard_device: WireGuardProxy<'static>) -> Self {
         Self { wire_guard_device }
     }
@@ -70,5 +70,5 @@ impl WirGuard {
 pub enum SpecificDevice {
     Wireless(Wireless),
     Wired(Wired),
-    WirGuard(WirGuard),
+    WireGuard(WireGuard),
 }
