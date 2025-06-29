@@ -9,8 +9,8 @@ use crate::interfaces::{
 
 use super::{
     active_connection::ActiveConnection,
-    devices::{SpecificDevice, WireGuard, Wired, Wireless},
-    enums::{DeviceState, DeviceType},
+    devices::{SpecificDevice, Wireless},
+    enums::DeviceType,
     settings::ConnectionSetting,
 };
 
@@ -24,9 +24,9 @@ impl Device {
         Self { device }
     }
 
-    pub async fn state(&self) -> Result<DeviceState> {
-        self.device.state().await.map(DeviceState::from)
-    }
+    // pub async fn state(&self) -> Result<DeviceState> {
+    //     self.device.state().await.map(DeviceState::from)
+    // }
 
     pub async fn device_type(&self) -> Result<DeviceType> {
         self.device.device_type().await.map(DeviceType::from)
@@ -91,8 +91,7 @@ impl Device {
                     .build()
                     .await
                     .unwrap();
-                let device = Wired::new(wired_device).await;
-                Some(SpecificDevice::Wired(device))
+                Some(SpecificDevice::Wired(wired_device))
             }
             DeviceType::WireGuard => {
                 let connection = self.device.inner().connection();
@@ -103,8 +102,7 @@ impl Device {
                     .build()
                     .await
                     .unwrap();
-                let device = WireGuard::new(wire_guard_device).await;
-                Some(SpecificDevice::WireGuard(device))
+                Some(SpecificDevice::WireGuard(wire_guard_device))
             }
             _ => None,
         }

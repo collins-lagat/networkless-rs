@@ -18,9 +18,9 @@ impl ActiveConnection {
         self.active_connection.id().await
     }
 
-    pub async fn device_type(&self) -> Result<DeviceType> {
-        self.active_connection.type_().await.map(DeviceType::from)
-    }
+    // pub async fn device_type(&self) -> Result<DeviceType> {
+    //     self.active_connection.type_().await.map(DeviceType::from)
+    // }
 
     pub async fn devices(&self) -> Result<Vec<Device>> {
         let devices = self.active_connection.devices().await?;
