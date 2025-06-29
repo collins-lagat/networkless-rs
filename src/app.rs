@@ -256,11 +256,6 @@ impl App {
                         .await;
                 }
                 DeviceType::Ethernet => {
-                    let ethernet_device = match device.to_specific_device().await {
-                        Some(SpecificDevice::Wired(device)) => device,
-                        _ => return ControlFlow::Break(()),
-                    };
-
                     tray_manager
                         .update(TrayUpdate::Wired(WiredState { on: true }))
                         .await;
