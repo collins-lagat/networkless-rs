@@ -145,6 +145,7 @@ impl App {
                 .update(TrayUpdate::AirplaneMode(AirplaneModeState { on: false }))
                 .await;
         }
+
         match state {
             NmState::Unknown => {
                 tray_manager.update(TrayUpdate::Icon(Icon::Unknown)).await;
@@ -152,17 +153,17 @@ impl App {
             }
             NmState::Asleep => {
                 tray_manager.update(TrayUpdate::Icon(Icon::Off)).await;
-                return ControlFlow::Break(());
+                return ControlFlow::Continue(());
             }
             NmState::Connecting | NmState::Disconnecting => {
                 tray_manager.update(TrayUpdate::Icon(Icon::Busy)).await;
-                return ControlFlow::Break(());
+                return ControlFlow::Continue(());
             }
             NmState::Disconnected => {
                 tray_manager
                     .update(TrayUpdate::Icon(Icon::Disconnected))
                     .await;
-                return ControlFlow::Break(());
+                return ControlFlow::Continue(());
             }
             _ => {}
         };
@@ -176,20 +177,20 @@ impl App {
         match connectivity {
             NmConnectivityState::Unknown => {
                 tray_manager.update(TrayUpdate::Icon(Icon::Unknown)).await;
-                return ControlFlow::Break(());
+                return ControlFlow::Continue(());
             }
             NmConnectivityState::None => {
                 tray_manager
                     .update(TrayUpdate::Icon(Icon::Disconnected))
                     .await;
-                return ControlFlow::Break(());
+                return ControlFlow::Continue(());
             }
             NmConnectivityState::Portal => {
                 todo!("handle portal");
             }
             NmConnectivityState::Loss => {
                 tray_manager.update(TrayUpdate::Icon(Icon::Limited)).await;
-                return ControlFlow::Break(());
+                return ControlFlow::Continue(());
             }
             _ => {}
         }
