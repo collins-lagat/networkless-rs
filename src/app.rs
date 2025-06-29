@@ -16,6 +16,7 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
+    Init,
     Update,
     Shutdown,
 }
@@ -81,6 +82,13 @@ impl App {
 
         while let Some(event) = event_rx.recv().await {
             match event {
+                Event::Init => {
+                    if let ControlFlow::Break(_) = self.update(&mut tray_manager).await {
+                        break;
+                    }
+
+                    continue;
+                }
                 Event::Update => {
                     if let ControlFlow::Break(_) = self.update(&mut tray_manager).await {
                         break;

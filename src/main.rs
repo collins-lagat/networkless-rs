@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
 
     let tray_manager = TrayManager::new(app.clone());
 
-    app.send_event(Event::Update).await;
+    app.send_event(Event::Init).await;
 
     app.run(event_rx, action_rx, tray_manager).await;
 
