@@ -119,6 +119,10 @@ impl App {
                 tray_manager.update(TrayUpdate::Icon(Icon::Off)).await;
                 return ControlFlow::Break(());
             }
+            NmState::Connecting | NmState::Disconnecting => {
+                tray_manager.update(TrayUpdate::Icon(Icon::Busy)).await;
+                return ControlFlow::Break(());
+            }
             NmState::Disconnected => {
                 tray_manager
                     .update(TrayUpdate::Icon(Icon::Disconnected))
