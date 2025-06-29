@@ -74,7 +74,7 @@ impl App {
         &self,
         mut event_rx: Receiver<Event>,
         mut action_rx: Receiver<Action>,
-        tray_handle: Handle<Tray>,
+        mut tray_manager: TrayManager,
     ) {
         let app = self.clone();
         tokio::spawn(async move {
@@ -95,7 +95,7 @@ impl App {
         while let Some(event) = event_rx.recv().await {
             match event {
                 Event::Tick => {
-                    if let ControlFlow::Break(_) = self.update_tray_icon(&tray_handle).await {
+                    if let ControlFlow::Break(_) = self.update(&mut tray_manager).await {
                         break;
                     }
 
@@ -106,14 +106,7 @@ impl App {
         }
     }
 
-    async fn update_tray_icon(&self, tray_handle: &Handle<Tray>) -> ControlFlow<()> {
-        let update_tray_icon_helper = async |icon: Icon| {
-            tray_handle
-                .update(move |tray| {
-                    tray.set_icon(icon);
-                })
-                .await;
-        };
+    async fn update(&self, tray_manager: &mut TrayManager) -> ControlFlow<()> {
         let state = match self.network_manager.state().await {
             Ok(state) => state,
             Err(e) => {
@@ -129,16 +122,20 @@ impl App {
             }
         };
         if is_airplane_mode {
-            update_tray_icon_helper(Icon::AirplaneMode).await;
+            tray_manager
+                .update(TrayUpdate::AirplaneMode(AirplaneModeState { on: true }))
+                .await;
             return ControlFlow::Break(());
         }
         match state {
             NmState::Asleep => {
-                update_tray_icon_helper(Icon::Off).await;
+                tray_manager.update(TrayUpdate::Icon(Icon::Off)).await;
                 return ControlFlow::Break(());
             }
             NmState::Disconnected => {
-                update_tray_icon_helper(Icon::Disconnected).await;
+                tray_manager
+                    .update(TrayUpdate::Icon(Icon::Disconnected))
+                    .await;
                 return ControlFlow::Break(());
             }
             _ => {}
@@ -152,18 +149,20 @@ impl App {
         };
         match connectivity {
             NmConnectivityState::Unknown => {
-                update_tray_icon_helper(Icon::Unknown).await;
+                tray_manager.update(TrayUpdate::Icon(Icon::Unknown)).await;
                 return ControlFlow::Break(());
             }
             NmConnectivityState::None => {
-                update_tray_icon_helper(Icon::Disconnected).await;
+                tray_manager
+                    .update(TrayUpdate::Icon(Icon::Disconnected))
+                    .await;
                 return ControlFlow::Break(());
             }
             NmConnectivityState::Portal => {
                 todo!("handle portal");
             }
             NmConnectivityState::Loss => {
-                update_tray_icon_helper(Icon::Limited).await;
+                tray_manager.update(TrayUpdate::Icon(Icon::Limited)).await;
                 return ControlFlow::Break(());
             }
             _ => {}
@@ -217,7 +216,9 @@ impl App {
 
                     let strength = active_access_point.strength().await.unwrap();
 
-                    update_tray_icon_helper(Icon::Wifi(strength)).await;
+                    tray_manager
+                        .update(TrayUpdate::Icon(Icon::Wifi(strength)))
+                        .await;
                 }
                 DeviceType::Ethernet => {
                     let ethernet_device = device
@@ -233,14 +234,14 @@ impl App {
                         .unwrap();
                     let speed = ethernet_device.speed().await.unwrap();
 
-                    update_tray_icon_helper(Icon::Ethernet).await;
+                    tray_manager.update(TrayUpdate::Icon(Icon::Ethernet)).await;
 
-                    tray_handle
-                        .update(|tray| tray.set_wired_state(Some(WiredState { on: true, speed })))
+                    tray_manager
+                        .update(TrayUpdate::Wired(WiredState { on: true, speed }))
                         .await;
                 }
                 DeviceType::TunTap => {
-                    update_tray_icon_helper(Icon::Tun).await;
+                    tray_manager.update(TrayUpdate::Icon(Icon::Tun)).await;
                 }
                 DeviceType::Bluetooth => {
                     todo!("support bluetooth in future");
@@ -280,19 +281,17 @@ impl App {
                 Err(e) => {
                     println!("Failed to get wireguard connection: {}", e);
                     return ControlFlow::Break(());
+                    tray_manager
+                        .update(TrayUpdate::Vpn(VPNState {
+                            on: true,
+                            active_connection: wire_guard_connection_id.clone(),
+                        }))
+                        .await;
                 }
             };
 
             let wire_guard_connection_id = wire_guard_connection.id().await.unwrap();
 
-            tray_handle
-                .update(|tray| {
-                    tray.set_vpn_state(Some(VPNState {
-                        on: true,
-                        active_connection: wire_guard_connection_id.clone(),
-                    }));
-                })
-                .await;
         } else {
             tray_handle.update(|tray| tray.set_vpn_state(None)).await;
         }

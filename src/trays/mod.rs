@@ -1,45 +1,177 @@
-use airplane_mode::AirplaneModeTray;
-use anyhow::Result;
+use airplane_mode_tray::AirplaneModeTray;
 use image::GenericImageView;
 use ksni::{Handle, TrayMethods};
-use network::NetworkTray;
-use vpn::VpnTray;
+use network_tray::NetworkTray;
+use vpn_tray::VpnTray;
 
-use crate::network::network_manager::NetworkManager;
+use crate::app::App;
 
-mod airplane_mode;
-mod network;
-mod vpn;
+mod airplane_mode_tray;
+mod network_tray;
+mod vpn_tray;
+pub use network_tray::{AirplaneModeState, Icon, VPNState, WifiConnection, WifiState, WiredState};
+
+pub enum TrayUpdate {
+    Icon(Icon),
+    Wireless(WifiState),
+    Wired(WiredState),
+    Vpn(VPNState),
+    AirplaneMode(AirplaneModeState),
+}
 
 pub struct TrayManager {
-    nm: NetworkManager,
+    app: App,
+    network_tray_handle: Option<Handle<NetworkTray>>,
+    vpn_tray_handle: Option<Handle<VpnTray>>,
+    airplane_mode_tray_handle: Option<Handle<AirplaneModeTray>>,
 }
 
 impl TrayManager {
-    pub fn new(nm: NetworkManager) -> Self {
-        Self { nm }
+    pub fn new(app: App) -> Self {
+        Self {
+            app,
+            network_tray_handle: None,
+            vpn_tray_handle: None,
+            airplane_mode_tray_handle: None,
+        }
     }
 
-    pub async fn spawn(
-        &mut self,
-    ) -> Result<(
-        Handle<NetworkTray>,
-        Handle<AirplaneModeTray>,
-        Handle<VpnTray>,
-    )> {
-        let network_tray = NetworkTray::new(self.nm.clone());
-        let airplane_mode_tray = AirplaneModeTray::new(self.nm.clone());
-        let vpn_tray = VpnTray::new();
+    pub async fn update(&mut self, state: TrayUpdate) {
+        match state {
+            TrayUpdate::Icon(icon) => self.update_icon(icon).await,
+            TrayUpdate::Wireless(state) => self.update_wireless(state).await,
+            TrayUpdate::Wired(state) => self.update_wired(state).await,
+            TrayUpdate::Vpn(state) => self.update_vpn(state).await,
+            TrayUpdate::AirplaneMode(state) => self.update_airplane_mode(state).await,
+        };
+    }
 
-        let network_handle = network_tray.spawn().await?;
-        let airplane_mode_handle = airplane_mode_tray.spawn().await?;
-        let vpn_handle = vpn_tray.spawn().await?;
+    async fn create_network_tray(&mut self) {
+        if self.network_tray_handle.is_some() {
+            return;
+        }
+        let mut network_tray = NetworkTray::new();
+        network_tray.set_app(self.app.clone());
+        let handle = network_tray.spawn().await.unwrap();
+        self.network_tray_handle = Some(handle);
+    }
 
-        Ok((network_handle, airplane_mode_handle, vpn_handle))
+    async fn create_vpn_tray(&mut self) {
+        if self.vpn_tray_handle.is_some() {
+            return;
+        }
+        let mut vpn_tray = VpnTray::new();
+        vpn_tray.set_app(self.app.clone());
+        let handle = vpn_tray.spawn().await.unwrap();
+        self.vpn_tray_handle = Some(handle);
+    }
+
+    async fn create_airplane_mode_tray(&mut self) {
+        if self.airplane_mode_tray_handle.is_some() {
+            return;
+        }
+        let mut airplane_mode_tray = AirplaneModeTray::new();
+        airplane_mode_tray.set_app(self.app.clone());
+        let handle = airplane_mode_tray.spawn().await.unwrap();
+        self.airplane_mode_tray_handle = Some(handle);
+    }
+
+    async fn update_icon(&mut self, icon: Icon) {
+        if self.network_tray_handle.is_none() {
+            self.create_network_tray().await;
+        }
+
+        if let Some(network_tray_handle) = &mut self.network_tray_handle {
+            network_tray_handle
+                .update(|tray| {
+                    tray.set_icon(icon);
+                })
+                .await;
+        }
+    }
+
+    async fn update_wireless(&mut self, state: WifiState) {
+        if self.network_tray_handle.is_none() {
+            self.create_network_tray().await;
+        }
+
+        if let Some(network_tray_handle) = &mut self.network_tray_handle {
+            network_tray_handle
+                .update(|tray| {
+                    tray.set_wifi_state(Some(state.clone()));
+                })
+                .await;
+        }
+    }
+
+    async fn update_wired(&mut self, state: WiredState) {
+        if self.network_tray_handle.is_none() {
+            self.create_network_tray().await;
+        }
+
+        if let Some(network_tray_handle) = &mut self.network_tray_handle {
+            network_tray_handle
+                .update(|tray| {
+                    tray.set_wired_state(Some(state.clone()));
+                })
+                .await;
+        }
+    }
+
+    async fn update_vpn(&mut self, state: VPNState) {
+        if self.vpn_tray_handle.is_none() {
+            self.create_vpn_tray().await;
+        }
+
+        if let Some(vpn_tray_handle) = &mut self.vpn_tray_handle {
+            vpn_tray_handle
+                .update(|_tray| {
+                    todo!("update vpn tray");
+                })
+                .await;
+        }
+
+        if self.network_tray_handle.is_none() {
+            self.create_network_tray().await;
+        }
+
+        if let Some(network_tray_handle) = &mut self.network_tray_handle {
+            network_tray_handle
+                .update(|tray| {
+                    tray.set_vpn_state(Some(state.clone()));
+                })
+                .await;
+        }
+    }
+
+    async fn update_airplane_mode(&mut self, state: AirplaneModeState) {
+        if self.airplane_mode_tray_handle.is_none() {
+            self.create_airplane_mode_tray().await;
+        }
+
+        if let Some(airplane_mode_tray_handle) = &mut self.airplane_mode_tray_handle {
+            airplane_mode_tray_handle
+                .update(|_tray| {
+                    todo!("update airplane mode tray");
+                })
+                .await;
+        }
+
+        if self.network_tray_handle.is_none() {
+            self.create_network_tray().await;
+        }
+
+        if let Some(network_tray_handle) = &mut self.network_tray_handle {
+            network_tray_handle
+                .update(|tray| {
+                    tray.set_airplane_mode_state(Some(state.clone()));
+                })
+                .await;
+        }
     }
 }
 
-pub fn get_icon_from_image_bytes(image_bytes: &[u8]) -> ksni::Icon {
+fn get_icon_from_image_bytes(image_bytes: &[u8]) -> ksni::Icon {
     let img = image::load_from_memory_with_format(image_bytes, image::ImageFormat::Png)
         .expect("valid image");
     let (width, height) = img.dimensions();

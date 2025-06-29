@@ -2,19 +2,19 @@ use std::sync::LazyLock;
 
 use ksni::{Icon, Tray};
 
-use crate::{APP_ID, trays::get_icon_from_image_bytes};
+use crate::{APP_ID, app::App, trays::get_icon_from_image_bytes};
 
 pub struct VpnTray {
-    on: bool,
+    app: Option<App>,
 }
 
 impl VpnTray {
     pub fn new() -> Self {
-        Self { on: false }
+        Self { app: None }
     }
 
-    pub async fn sync(&mut self) {
-        self.on = false;
+    pub fn set_app(&mut self, app: App) {
+        self.app = Some(app);
     }
 }
 
@@ -29,9 +29,7 @@ impl Tray for VpnTray {
         static VPN_ICON: LazyLock<Icon> =
             LazyLock::new(|| get_icon_from_image_bytes(include_bytes!("../../assets/vpn.png")));
 
-        if self.on {
-            icon.push(VPN_ICON.clone());
-        }
+        icon.push(VPN_ICON.clone());
 
         icon
     }

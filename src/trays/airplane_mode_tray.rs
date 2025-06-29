@@ -2,20 +2,19 @@ use std::sync::LazyLock;
 
 use ksni::{Icon, Tray};
 
-use crate::{APP_ID, network::network_manager::NetworkManager, trays::get_icon_from_image_bytes};
+use crate::{APP_ID, app::App, trays::get_icon_from_image_bytes};
 
 pub struct AirplaneModeTray {
-    nm: NetworkManager,
-    on: bool,
+    app: Option<App>,
 }
 
 impl AirplaneModeTray {
-    pub fn new(nm: NetworkManager) -> Self {
-        Self { nm, on: false }
+    pub fn new() -> Self {
+        Self { app: None }
     }
 
-    pub async fn sync(&mut self) {
-        self.on = self.nm.airplane_mode_enabled().await.unwrap_or(false);
+    pub fn set_app(&mut self, app: App) {
+        self.app = Some(app);
     }
 }
 
@@ -31,9 +30,7 @@ impl Tray for AirplaneModeTray {
             get_icon_from_image_bytes(include_bytes!("../../assets/airplane_mode.png"))
         });
 
-        if self.on {
-            icon.push(AIRPLANE_MODE_ICON.clone());
-        }
+        icon.push(AIRPLANE_MODE_ICON.clone());
 
         icon
     }

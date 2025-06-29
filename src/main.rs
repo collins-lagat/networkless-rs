@@ -1,7 +1,6 @@
 mod app;
 mod interfaces;
 mod network;
-mod tray;
 mod trays;
 
 use std::{fs::File, path::Path};
@@ -10,7 +9,6 @@ use anyhow::{Result, bail};
 use app::{Action, App, Event};
 use fs2::FileExt;
 use futures::StreamExt;
-use ksni::TrayMethods;
 use log::{LevelFilter, error, info};
 use network::network_manager::NetworkManager;
 use signal_hook::consts::{SIGINT, SIGTERM};
@@ -20,7 +18,7 @@ use tokio::{
     fs,
     sync::mpsc::{Sender, channel},
 };
-use tray::Tray;
+use trays::TrayManager;
 use zbus::Connection;
 
 pub const APP_ID: &str = "com.collinslagat.applets.networkless";
@@ -65,18 +63,16 @@ async fn main() -> Result<()> {
 
     let signals_task = tokio::spawn(handle_signals(signals, event_tx.clone()));
 
-    let mut tray = Tray::new();
-
     let connection = Connection::system().await?;
     let network_manager = NetworkManager::new(connection).await?;
 
     let app = App::new(event_tx, action_tx, network_manager);
 
-    tray.set_app(app.clone());
+    let tray_manager = TrayManager::new(app.clone());
 
-    let tray_handle = tray.spawn().await?;
+    app.send_event(Event::Update).await;
 
-    app.run(event_rx, action_rx, tray_handle).await;
+    app.run(event_rx, action_rx, tray_manager).await;
 
     info!("Cleaning up");
 
