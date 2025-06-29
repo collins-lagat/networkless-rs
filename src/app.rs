@@ -140,7 +140,10 @@ impl App {
             tray_manager
                 .update(TrayUpdate::AirplaneMode(AirplaneModeState { on: true }))
                 .await;
-            return ControlFlow::Break(());
+        } else {
+            tray_manager
+                .update(TrayUpdate::AirplaneMode(AirplaneModeState { on: false }))
+                .await;
         }
         match state {
             NmState::Asleep => {
