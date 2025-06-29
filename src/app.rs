@@ -53,10 +53,6 @@ impl App {
         self.event_tx.send(event).await.unwrap();
     }
 
-    pub async fn send_action(&self, action: Action) {
-        self.action_tx.send(action).await.unwrap();
-    }
-
     pub fn send_action_blocking(&self, action: Action) {
         self.action_tx.blocking_send(action).unwrap();
     }
