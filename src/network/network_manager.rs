@@ -11,6 +11,8 @@ use super::enums::DeviceType;
 use super::enums::NmConnectivityState;
 use super::enums::NmState;
 use crate::interfaces::active::ActiveProxy;
+use crate::interfaces::network_manager::DeviceAdded;
+use crate::interfaces::network_manager::DeviceRemoved;
 use crate::interfaces::network_manager::StateChanged;
 use crate::interfaces::{device::DeviceProxy, network_manager::NetworkManagerProxy};
 
@@ -31,6 +33,28 @@ impl NetworkManager {
         F: AsyncFnOnce(StateChanged) -> () + Send + Copy,
     {
         let mut stream = self.nm.receive_state_changed_signal().await?;
+        while let Some(state) = stream.next().await {
+            f(state).await;
+        }
+        Ok(())
+    }
+
+    pub async fn listening_to_device_added<F>(&self, f: F) -> Result<()>
+    where
+        F: AsyncFnOnce(DeviceAdded) -> () + Send + Copy,
+    {
+        let mut stream = self.nm.receive_device_added().await?;
+        while let Some(state) = stream.next().await {
+            f(state).await;
+        }
+        Ok(())
+    }
+
+    pub async fn listening_to_device_removed<F>(&self, f: F) -> Result<()>
+    where
+        F: AsyncFnOnce(DeviceRemoved) -> () + Send + Copy,
+    {
+        let mut stream = self.nm.receive_device_removed().await?;
         while let Some(state) = stream.next().await {
             f(state).await;
         }
