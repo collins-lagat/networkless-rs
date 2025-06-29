@@ -146,6 +146,10 @@ impl App {
                 .await;
         }
         match state {
+            NmState::Unknown => {
+                tray_manager.update(TrayUpdate::Icon(Icon::Unknown)).await;
+                return ControlFlow::Continue(());
+            }
             NmState::Asleep => {
                 tray_manager.update(TrayUpdate::Icon(Icon::Off)).await;
                 return ControlFlow::Break(());
