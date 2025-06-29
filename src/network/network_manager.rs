@@ -101,12 +101,10 @@ impl NetworkManager {
             .map(DeviceType::from)
     }
 
-    pub async fn check_connectivity(&self) -> Result<()> {
-        let state = self.state().await?;
-        if state == NmState::Disconnected {
-            self.nm.check_connectivity().await?;
-        }
-        Ok(())
+    pub async fn check_connectivity(&self) -> Result<NmConnectivityState> {
+        let connectivity = self.nm.check_connectivity().await?;
+        let connectivity = NmConnectivityState::from(connectivity);
+        Ok(connectivity)
     }
 
     pub async fn activate_connection(
