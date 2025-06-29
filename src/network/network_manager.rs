@@ -1,6 +1,7 @@
 use anyhow::Result;
 use anyhow::bail;
 use futures::StreamExt;
+use log::info;
 use tokio::process::Command;
 use zbus::Connection;
 use zbus::Result as ZbusResult;
@@ -34,6 +35,7 @@ impl NetworkManager {
     {
         let mut stream = self.nm.receive_state_changed_signal().await?;
         while let Some(state) = stream.next().await {
+            info!("State changed");
             f(state).await;
         }
         Ok(())
@@ -45,6 +47,7 @@ impl NetworkManager {
     {
         let mut stream = self.nm.receive_device_added().await?;
         while let Some(state) = stream.next().await {
+            info!("Device added");
             f(state).await;
         }
         Ok(())
@@ -56,6 +59,7 @@ impl NetworkManager {
     {
         let mut stream = self.nm.receive_device_removed().await?;
         while let Some(state) = stream.next().await {
+            info!("Device removed");
             f(state).await;
         }
         Ok(())
