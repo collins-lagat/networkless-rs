@@ -168,6 +168,7 @@ impl App {
                 return ControlFlow::Break(());
             }
         };
+
         for device in devices {
             let device_type = match device.device_type().await {
                 Ok(device_type) => device_type,
@@ -188,6 +189,50 @@ impl App {
 
                     let strength = active_access_point.strength().await.unwrap();
 
+                    tray_manager
+                        .update(TrayUpdate::Icon(Icon::Wifi(strength)))
+                        .await;
+                }
+                DeviceType::Ethernet => {
+                    tray_manager.update(TrayUpdate::Icon(Icon::Ethernet)).await;
+                }
+                DeviceType::TunTap => {
+                    tray_manager.update(TrayUpdate::Icon(Icon::Tun)).await;
+                }
+                DeviceType::Bluetooth => {
+                    todo!("support bluetooth in future");
+                }
+                DeviceType::Modem => {
+                    todo!("support modem in future");
+                }
+                _ => {}
+            }
+        }
+
+        let devices = match self.network_manager.all_devices().await {
+            Ok(devices) => devices,
+            Err(e) => {
+                println!("Failed to get devices: {}", e);
+                return ControlFlow::Break(());
+            }
+        };
+
+        for device in devices {
+            let device_type = match device.device_type().await {
+                Ok(device_type) => device_type,
+                Err(e) => {
+                    println!("Failed to get device type: {}", e);
+                    continue;
+                }
+            };
+
+            match device_type {
+                DeviceType::Wifi => {
+                    let wireless_device = match device.to_specific_device().await {
+                        Some(SpecificDevice::Wireless(device)) => device,
+                        _ => return ControlFlow::Break(()),
+                    };
+
                     let mut access_points = wireless_device.access_points().await.unwrap();
                     let futures = access_points.iter_mut().map(|ap| async {
                         WifiConnection {
@@ -198,9 +243,6 @@ impl App {
                     let available_connections = futures::future::join_all(futures).await;
                     let known_connections = Vec::<WifiConnection>::new();
 
-                    tray_manager
-                        .update(TrayUpdate::Icon(Icon::Wifi(strength)))
-                        .await;
                     tray_manager
                         .update(TrayUpdate::Wireless(WifiState {
                             on: true,
@@ -215,20 +257,9 @@ impl App {
                         _ => return ControlFlow::Break(()),
                     };
 
-                    tray_manager.update(TrayUpdate::Icon(Icon::Ethernet)).await;
-
                     tray_manager
                         .update(TrayUpdate::Wired(WiredState { on: true }))
                         .await;
-                }
-                DeviceType::TunTap => {
-                    tray_manager.update(TrayUpdate::Icon(Icon::Tun)).await;
-                }
-                DeviceType::Bluetooth => {
-                    todo!("support bluetooth in future");
-                }
-                DeviceType::Modem => {
-                    todo!("support modem in future");
                 }
                 DeviceType::WireGuard => {
                     let wire_guard_connection = device.active_connection().await.unwrap();
