@@ -214,12 +214,11 @@ impl App {
                         Some(SpecificDevice::Wired(device)) => device,
                         _ => return ControlFlow::Break(()),
                     };
-                    let speed = ethernet_device.speed().await.unwrap();
 
                     tray_manager.update(TrayUpdate::Icon(Icon::Ethernet)).await;
 
                     tray_manager
-                        .update(TrayUpdate::Wired(WiredState { on: true, speed }))
+                        .update(TrayUpdate::Wired(WiredState { on: true }))
                         .await;
                 }
                 DeviceType::TunTap => {

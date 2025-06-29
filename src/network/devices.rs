@@ -1,3 +1,4 @@
+use log::info;
 use zbus::Result;
 
 use crate::interfaces::{
@@ -48,11 +49,6 @@ pub struct Wired {
 impl Wired {
     pub async fn new(wired_device: WiredProxy<'static>) -> Self {
         Self { wired_device }
-    }
-
-    pub async fn speed(&self) -> Result<String> {
-        let speed = format!("{:?} Mbps", self.wired_device.speed().await.unwrap());
-        Ok(speed)
     }
 }
 

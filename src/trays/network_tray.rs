@@ -34,7 +34,6 @@ pub struct WifiState {
 #[derive(Debug, Clone)]
 pub struct WiredState {
     pub on: bool,
-    pub speed: String,
 }
 
 #[derive(Debug, Clone)]
@@ -228,26 +227,14 @@ impl ksni::Tray for NetworkTray {
 
         if let Some(wired_state) = &self.wired_state {
             menu.push(
-                SubMenu {
+                CheckmarkItem {
                     label: "Wired".into(),
-                    submenu: vec![
-                        CheckmarkItem {
-                            label: "On".into(),
-                            checked: wired_state.on,
-                            activate: Box::new(|this: &mut Self| {
-                                if let Some(app) = this.app.as_ref() {
-                                    app.send_action_blocking(Action::ToggleWired);
-                                }
-                            }),
-                            ..Default::default()
+                    checked: wired_state.on,
+                    activate: Box::new(|this: &mut Self| {
+                        if let Some(app) = this.app.as_ref() {
+                            app.send_action_blocking(Action::ToggleWired);
                         }
-                        .into(),
-                        StandardItem {
-                            label: wired_state.speed.clone(),
-                            ..Default::default()
-                        }
-                        .into(),
-                    ],
+                    }),
                     ..Default::default()
                 }
                 .into(),
