@@ -1,5 +1,6 @@
 use std::ops::ControlFlow;
 
+use log::info;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::{
@@ -68,6 +69,7 @@ impl App {
         tokio::spawn(async move {
             app.network_manager
                 .listening_to_state_changes(async |_| {
+                    info!("State changed");
                     app.send_event(Event::Update).await;
                 })
                 .await
@@ -78,6 +80,7 @@ impl App {
         tokio::spawn(async move {
             app.network_manager
                 .listening_to_device_added(async |_| {
+                    info!("Device added");
                     app.send_event(Event::Update).await;
                 })
                 .await
@@ -88,6 +91,7 @@ impl App {
         tokio::spawn(async move {
             app.network_manager
                 .listening_to_device_removed(async |_| {
+                    info!("Device removed");
                     app.send_event(Event::Update).await;
                 })
                 .await
