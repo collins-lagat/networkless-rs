@@ -83,26 +83,28 @@ impl Device {
                 Some(SpecificDevice::Wireless(device))
             }
             DeviceType::Ethernet => {
-                let connection = self.device.inner().connection();
-                let path = self.device.inner().path().clone();
-                let wired_device = WiredProxy::builder(connection)
-                    .path(path)
-                    .unwrap()
-                    .build()
-                    .await
-                    .unwrap();
-                Some(SpecificDevice::Wired(wired_device))
+                // let connection = self.device.inner().connection();
+                // let path = self.device.inner().path().clone();
+                // let wired_device = WiredProxy::builder(connection)
+                //     .path(path)
+                //     .unwrap()
+                //     .build()
+                //     .await
+                //     .unwrap();
+                // Some(SpecificDevice::Wired(wired_device))
+                Some(SpecificDevice::Wired(()))
             }
             DeviceType::WireGuard => {
-                let connection = self.device.inner().connection();
-                let path = self.device.inner().path().clone();
-                let wire_guard_device = WireGuardProxy::builder(connection)
-                    .path(path)
-                    .unwrap()
-                    .build()
-                    .await
-                    .unwrap();
-                Some(SpecificDevice::WireGuard(wire_guard_device))
+                // let connection = self.device.inner().connection();
+                // let path = self.device.inner().path().clone();
+                // let wire_guard_device = WireGuardProxy::builder(connection)
+                //     .path(path)
+                //     .unwrap()
+                //     .build()
+                //     .await
+                //     .unwrap();
+                // Some(SpecificDevice::WireGuard(wire_guard_device))
+                Some(SpecificDevice::WireGuard(()))
             }
             _ => None,
         }

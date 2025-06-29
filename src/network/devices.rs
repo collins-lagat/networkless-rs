@@ -1,10 +1,6 @@
-use log::info;
 use zbus::Result;
 
-use crate::interfaces::{
-    access_point::AccessPointProxy,
-    devices::{wire_guard::WireGuardProxy, wired::WiredProxy, wireless::WirelessProxy},
-};
+use crate::interfaces::{access_point::AccessPointProxy, devices::wireless::WirelessProxy};
 
 use super::access_point::AccessPoint;
 
@@ -67,6 +63,6 @@ pub enum SpecificDevice {
     Wireless(Wireless),
     // Wired(Wired),
     // WireGuard(WireGuard),
-    Wired(WiredProxy<'static>),
-    WireGuard(WireGuardProxy<'static>),
+    Wired(()),
+    WireGuard(()),
 }
