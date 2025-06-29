@@ -7,10 +7,7 @@ use crate::interfaces::{
     device::DeviceProxy,
 };
 
-use super::{
-    device::Device,
-    enums::{ActiveConnectionState, DeviceType},
-};
+use super::device::Device;
 
 #[derive(Debug, Clone)]
 pub struct ActiveConnection {
@@ -26,12 +23,12 @@ impl ActiveConnection {
         self.active_connection.id().await
     }
 
-    pub async fn state(&self) -> Result<ActiveConnectionState> {
-        self.active_connection
-            .state()
-            .await
-            .map(ActiveConnectionState::from)
-    }
+    // pub async fn state(&self) -> Result<ActiveConnectionState> {
+    //     self.active_connection
+    //         .state()
+    //         .await
+    //         .map(ActiveConnectionState::from)
+    // }
 
     // pub async fn device_type(&self) -> Result<DeviceType> {
     //     self.active_connection.type_().await.map(DeviceType::from)

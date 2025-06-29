@@ -1,17 +1,13 @@
-use zbus::{Connection, Result, zvariant::ObjectPath};
+use zbus::Result;
 
 use crate::interfaces::{
-    active::ActiveProxy,
-    device::DeviceProxy,
-    devices::{wire_guard::WireGuardProxy, wired::WiredProxy, wireless::WirelessProxy},
-    settings::connection::ConnectionProxy,
+    active::ActiveProxy, device::DeviceProxy, devices::wireless::WirelessProxy,
 };
 
 use super::{
     active_connection::ActiveConnection,
     devices::{SpecificDevice, Wireless},
     enums::DeviceType,
-    settings::ConnectionSetting,
 };
 
 #[derive(Debug, Clone)]
@@ -41,32 +37,32 @@ impl Device {
         Ok(ActiveConnection::new(active_connection))
     }
 
-    pub async fn available_connections(&self) -> Result<Vec<ConnectionSetting>> {
-        let configured_connections = self.device.available_connections().await.unwrap();
-
-        let mut out = Vec::with_capacity(configured_connections.len());
-
-        for conn in configured_connections {
-            let setting = ConnectionProxy::builder(self.device.inner().connection())
-                .path(conn)?
-                .build()
-                .await?;
-            out.push(ConnectionSetting::new(setting));
-        }
-
-        Ok(out)
-    }
-
-    pub async fn with_connection_and_path<'a, F, Fut, R>(&'a self, f: F) -> Option<R>
-    where
-        F: FnOnce(&'a Connection, ObjectPath<'a>) -> Fut,
-        Fut: Future<Output = R> + 'a,
-    {
-        let connection = self.device.inner().connection();
-        let path = self.device.inner().path().clone();
-        let r = f(connection, path).await;
-        Some(r)
-    }
+    // pub async fn available_connections(&self) -> Result<Vec<ConnectionSetting>> {
+    //     let configured_connections = self.device.available_connections().await.unwrap();
+    //
+    //     let mut out = Vec::with_capacity(configured_connections.len());
+    //
+    //     for conn in configured_connections {
+    //         let setting = ConnectionProxy::builder(self.device.inner().connection())
+    //             .path(conn)?
+    //             .build()
+    //             .await?;
+    //         out.push(ConnectionSetting::new(setting));
+    //     }
+    //
+    //     Ok(out)
+    // }
+    //
+    // pub async fn with_connection_and_path<'a, F, Fut, R>(&'a self, f: F) -> Option<R>
+    // where
+    //     F: FnOnce(&'a Connection, ObjectPath<'a>) -> Fut,
+    //     Fut: Future<Output = R> + 'a,
+    // {
+    //     let connection = self.device.inner().connection();
+    //     let path = self.device.inner().path().clone();
+    //     let r = f(connection, path).await;
+    //     Some(r)
+    // }
 
     pub async fn to_specific_device(&self) -> Option<SpecificDevice> {
         match self.device_type().await.unwrap() {

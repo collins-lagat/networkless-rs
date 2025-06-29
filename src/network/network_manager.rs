@@ -8,7 +8,6 @@ use zbus::Result as ZbusResult;
 
 use super::active_connection::ActiveConnection;
 use super::device::Device;
-use super::enums::DeviceType;
 use super::enums::NmConnectivityState;
 use super::enums::NmState;
 use crate::interfaces::active::ActiveProxy;
@@ -98,47 +97,47 @@ impl NetworkManager {
         Ok(ActiveConnection::new(primary_connection))
     }
 
-    pub async fn primary_connection_type(&self) -> ZbusResult<DeviceType> {
-        self.nm
-            .primary_connection_type()
-            .await
-            .map(DeviceType::from)
-    }
-
-    pub async fn check_connectivity(&self) -> Result<NmConnectivityState> {
-        let connectivity = self.nm.check_connectivity().await?;
-        let connectivity = NmConnectivityState::from(connectivity);
-        Ok(connectivity)
-    }
-
-    pub async fn activate_connection(
-        &self,
-        active_connection: zbus::zvariant::OwnedObjectPath,
-        device: zbus::zvariant::OwnedObjectPath,
-        specific_object: zbus::zvariant::OwnedObjectPath,
-    ) -> Result<()> {
-        self.nm
-            .activate_connection(&active_connection, &device, &specific_object)
-            .await?;
-        Ok(())
-    }
-
-    pub async fn deactivate_connection(
-        &self,
-        active_connection: &zbus::zvariant::OwnedObjectPath,
-    ) -> Result<()> {
-        self.nm.deactivate_connection(active_connection).await?;
-        Ok(())
-    }
+    // pub async fn primary_connection_type(&self) -> ZbusResult<DeviceType> {
+    //     self.nm
+    //         .primary_connection_type()
+    //         .await
+    //         .map(DeviceType::from)
+    // }
+    //
+    // pub async fn check_connectivity(&self) -> Result<NmConnectivityState> {
+    //     let connectivity = self.nm.check_connectivity().await?;
+    //     let connectivity = NmConnectivityState::from(connectivity);
+    //     Ok(connectivity)
+    // }
+    //
+    // pub async fn activate_connection(
+    //     &self,
+    //     active_connection: zbus::zvariant::OwnedObjectPath,
+    //     device: zbus::zvariant::OwnedObjectPath,
+    //     specific_object: zbus::zvariant::OwnedObjectPath,
+    // ) -> Result<()> {
+    //     self.nm
+    //         .activate_connection(&active_connection, &device, &specific_object)
+    //         .await?;
+    //     Ok(())
+    // }
+    //
+    // pub async fn deactivate_connection(
+    //     &self,
+    //     active_connection: &zbus::zvariant::OwnedObjectPath,
+    // ) -> Result<()> {
+    //     self.nm.deactivate_connection(active_connection).await?;
+    //     Ok(())
+    // }
 
     pub async fn wifi_enabled(&self) -> Result<bool> {
         Ok(self.nm.wireless_enabled().await?)
     }
 
-    pub async fn set_wifi_enabled(&self, enabled: bool) -> Result<()> {
-        self.nm.set_wireless_enabled(enabled).await?;
-        Ok(())
-    }
+    // pub async fn set_wifi_enabled(&self, enabled: bool) -> Result<()> {
+    //     self.nm.set_wireless_enabled(enabled).await?;
+    //     Ok(())
+    // }
 
     pub async fn bluetooth_enabled(&self) -> Result<bool> {
         let cmd = Command::new("rfkill")
