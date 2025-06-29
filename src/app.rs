@@ -1,6 +1,6 @@
 use std::ops::ControlFlow;
 
-use log::info;
+use log::{error, info};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::{
@@ -126,7 +126,7 @@ impl App {
         let state = match self.network_manager.state().await {
             Ok(state) => state,
             Err(e) => {
-                println!("Failed to get state: {}", e);
+                error!("Failed to get state: {}", e);
                 return ControlFlow::Break(());
             }
         };
@@ -134,7 +134,7 @@ impl App {
         let is_airplane_mode = match self.network_manager.airplane_mode_enabled().await {
             Ok(is_airplane_mode) => is_airplane_mode,
             Err(e) => {
-                println!("Failed to get airplane mode: {}", e);
+                error!("Failed to get airplane mode: {}", e);
                 return ControlFlow::Break(());
             }
         };
@@ -174,7 +174,7 @@ impl App {
         let connectivity = match self.network_manager.connectivity().await {
             Ok(connectivity) => connectivity,
             Err(e) => {
-                println!("Failed to get connectivity: {}", e);
+                error!("Failed to get connectivity: {}", e);
                 return ControlFlow::Break(());
             }
         };
@@ -203,7 +203,7 @@ impl App {
         let primary_connection = match self.network_manager.primary_connection().await {
             Ok(primary_connection) => primary_connection,
             Err(e) => {
-                println!("Failed to get primary connection: {}", e);
+                error!("Failed to get primary connection: {}", e);
                 return ControlFlow::Break(());
             }
         };
@@ -211,7 +211,7 @@ impl App {
         let devices = match primary_connection.devices().await {
             Ok(devices) => devices,
             Err(e) => {
-                println!("Failed to get devices: {}", e);
+                error!("Failed to get devices: {}", e);
                 return ControlFlow::Break(());
             }
         };
@@ -220,7 +220,7 @@ impl App {
             let device_type = match device.device_type().await {
                 Ok(device_type) => device_type,
                 Err(e) => {
-                    println!("Failed to get device type: {}", e);
+                    error!("Failed to get device type: {}", e);
                     continue;
                 }
             };
@@ -259,7 +259,7 @@ impl App {
         let devices = match self.network_manager.devices().await {
             Ok(devices) => devices,
             Err(e) => {
-                println!("Failed to get devices: {}", e);
+                error!("Failed to get devices: {}", e);
                 return ControlFlow::Break(());
             }
         };
@@ -268,7 +268,7 @@ impl App {
             let device_type = match device.device_type().await {
                 Ok(device_type) => device_type,
                 Err(e) => {
-                    println!("Failed to get device type: {}", e);
+                    error!("Failed to get device type: {}", e);
                     continue;
                 }
             };
