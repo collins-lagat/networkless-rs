@@ -1,28 +1,22 @@
-use std::{ops::ControlFlow, time::Duration};
+use std::ops::ControlFlow;
 
-use anyhow::Result;
-use futures::future::join_all;
-use ksni::Handle;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::{
-    interfaces::{
-        access_point::AccessPointProxy,
-        devices::{wired::WiredProxy, wireless::WirelessProxy},
-    },
     network::{
-        device::Device,
+        devices::SpecificDevice,
         enums::{DeviceType, NmConnectivityState, NmState},
         network_manager::NetworkManager,
     },
-    tray::{Icon, Tray, VPNState, WiredState},
+    trays::{
+        AirplaneModeState, Icon, TrayManager, TrayUpdate, VPNState, WifiConnection, WifiState,
+        WiredState,
+    },
 };
-
-const TICK_RATE_SECS: u64 = 600;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Event {
-    Tick,
+    Update,
     Shutdown,
 }
 
@@ -48,9 +42,6 @@ impl App {
         action_tx: Sender<Action>,
         network_manager: NetworkManager,
     ) -> Self {
-        let actor = AppTicker::new(event_tx.clone());
-        tokio::spawn(async move { actor.run().await });
-
         Self {
             event_tx,
             action_tx,
@@ -80,7 +71,7 @@ impl App {
         tokio::spawn(async move {
             app.network_manager
                 .listening_to_state_changes(async |_| {
-                    app.send_event(Event::Tick).await;
+                    app.send_event(Event::Update).await;
                 })
                 .await
                 .unwrap();
@@ -94,7 +85,7 @@ impl App {
 
         while let Some(event) = event_rx.recv().await {
             match event {
-                Event::Tick => {
+                Event::Update => {
                     if let ControlFlow::Break(_) = self.update(&mut tray_manager).await {
                         break;
                     }
@@ -192,46 +183,41 @@ impl App {
 
             match device_type {
                 DeviceType::Wifi => {
-                    let active_access_point = device
-                        .with_connection_and_path(async |connection, path| {
-                            let wireless_device = WirelessProxy::builder(connection)
-                                .path(path)
-                                .unwrap()
-                                .build()
-                                .await
-                                .unwrap();
+                    let wireless_device = match device.to_specific_device().await {
+                        Some(SpecificDevice::Wireless(device)) => device,
+                        _ => return ControlFlow::Break(()),
+                    };
 
-                            let active_access_point_path =
-                                wireless_device.active_access_point().await.unwrap();
-
-                            AccessPointProxy::builder(connection)
-                                .path(active_access_point_path)
-                                .unwrap()
-                                .build()
-                                .await
-                                .unwrap()
-                        })
-                        .await
-                        .unwrap();
+                    let active_access_point = wireless_device.active_access_point().await.unwrap();
 
                     let strength = active_access_point.strength().await.unwrap();
+
+                    let mut access_points = wireless_device.access_points().await.unwrap();
+                    let futures = access_points.iter_mut().map(|ap| async {
+                        WifiConnection {
+                            id: ap.id().await.unwrap().into(),
+                            strength: ap.strength().await.unwrap(),
+                        }
+                    });
+                    let available_connections = futures::future::join_all(futures).await;
+                    let known_connections = Vec::<WifiConnection>::new();
 
                     tray_manager
                         .update(TrayUpdate::Icon(Icon::Wifi(strength)))
                         .await;
+                    tray_manager
+                        .update(TrayUpdate::Wireless(WifiState {
+                            on: true,
+                            available_connections,
+                            known_connections,
+                        }))
+                        .await;
                 }
                 DeviceType::Ethernet => {
-                    let ethernet_device = device
-                        .with_connection_and_path(async |connection, path| {
-                            WiredProxy::builder(connection)
-                                .path(path)
-                                .unwrap()
-                                .build()
-                                .await
-                                .unwrap()
-                        })
-                        .await
-                        .unwrap();
+                    let ethernet_device = match device.to_specific_device().await {
+                        Some(SpecificDevice::Wired(device)) => device,
+                        _ => return ControlFlow::Break(()),
+                    };
                     let speed = ethernet_device.speed().await.unwrap();
 
                     tray_manager.update(TrayUpdate::Icon(Icon::Ethernet)).await;
@@ -249,38 +235,10 @@ impl App {
                 DeviceType::Modem => {
                     todo!("support modem in future");
                 }
-                _ => {}
-            }
-        }
-        let devices = match self.network_manager.all_devices().await {
-            Ok(devices) => devices,
-            Err(e) => {
-                println!("Failed to get devices: {}", e);
-                return ControlFlow::Break(());
-            }
-        };
-        let futures = devices.iter().map(async |device: &Device| {
-            let device_type = match device.device_type().await {
-                Ok(device_type) => device_type,
-                Err(e) => {
-                    println!("Failed to get device type: {}", e);
-                    DeviceType::Unknown
-                }
-            };
-            (matches!(device_type, DeviceType::WireGuard), device.clone())
-        });
-        let results = join_all(futures).await;
-        let (has_wireguard_device, wireguard_device) = results
-            .iter()
-            .reduce(|acc, result| if result.0 { result } else { acc })
-            .unwrap();
+                DeviceType::WireGuard => {
+                    let wire_guard_connection = device.active_connection().await.unwrap();
+                    let wire_guard_connection_id = wire_guard_connection.id().await.unwrap();
 
-        if *has_wireguard_device {
-            let wire_guard_connection = match wireguard_device.active_connection().await {
-                Ok(connection) => connection,
-                Err(e) => {
-                    println!("Failed to get wireguard connection: {}", e);
-                    return ControlFlow::Break(());
                     tray_manager
                         .update(TrayUpdate::Vpn(VPNState {
                             on: true,
@@ -288,32 +246,9 @@ impl App {
                         }))
                         .await;
                 }
-            };
-
-            let wire_guard_connection_id = wire_guard_connection.id().await.unwrap();
-
-        } else {
-            tray_handle.update(|tray| tray.set_vpn_state(None)).await;
+                _ => {}
+            }
         }
         ControlFlow::Continue(())
-    }
-}
-
-struct AppTicker {
-    tx: Sender<Event>,
-}
-
-impl AppTicker {
-    fn new(tx: Sender<Event>) -> Self {
-        Self { tx }
-    }
-
-    async fn run(&self) -> Result<()> {
-        let tick_rate = Duration::from_secs(TICK_RATE_SECS);
-        let mut interval = tokio::time::interval(tick_rate);
-        loop {
-            interval.tick().await;
-            self.tx.send(Event::Tick).await?;
-        }
     }
 }
