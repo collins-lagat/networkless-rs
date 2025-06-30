@@ -305,13 +305,15 @@ impl App {
                         }
                     });
                     let available_connections = futures::future::join_all(futures).await;
-                    let known_connections = Vec::<WifiConnection>::new();
+                    // TODO: sort access points by:
+                    // 1. known connections
+                    // 2. strength
+                    // 3. name alphabetically
 
                     tray_manager
                         .update(TrayUpdate::Wireless(WifiState {
                             on: true,
                             available_connections,
-                            known_connections,
                         }))
                         .await;
                 }

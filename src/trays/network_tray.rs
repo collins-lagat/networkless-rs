@@ -1,5 +1,7 @@
 use std::sync::LazyLock;
 
+use ksni::MenuItem;
+
 use crate::{
     APP_ID,
     app::{Action, App},
@@ -27,7 +29,6 @@ pub struct WifiConnection {
 #[derive(Debug, Clone)]
 pub struct WifiState {
     pub on: bool,
-    pub known_connections: Vec<WifiConnection>,
     pub available_connections: Vec<WifiConnection>,
 }
 
@@ -182,7 +183,7 @@ impl ksni::Tray for NetworkTray {
         let mut menu = vec![];
 
         if let Some(wifi_state) = &self.wifi_state {
-            let connections = wifi_state
+            let options = wifi_state
                 .available_connections
                 .iter()
                 .map(|connection| RadioItem {
@@ -193,7 +194,7 @@ impl ksni::Tray for NetworkTray {
 
             menu.push(
                 SubMenu {
-                    label: "Wifi".into(),
+                    label: "WiFi: [placeholder]".into(),
                     submenu: vec![
                         CheckmarkItem {
                             label: "On".into(),
@@ -206,9 +207,16 @@ impl ksni::Tray for NetworkTray {
                             ..Default::default()
                         }
                         .into(),
+                        MenuItem::Separator,
+                        StandardItem {
+                            label: "Available Networks".to_string(),
+                            enabled: false,
+                            ..Default::default()
+                        }
+                        .into(),
                         RadioGroup {
                             selected: 0,
-                            options: connections,
+                            options,
                             select: Box::new(|this: &mut Self, current| {
                                 if let Some(app) = this.app.as_ref() {
                                     app.send_action_blocking(Action::ChangeAccessPoint(
