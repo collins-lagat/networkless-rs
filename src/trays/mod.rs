@@ -1,6 +1,7 @@
 use airplane_mode_tray::AirplaneModeTray;
 use image::GenericImageView;
 use ksni::{Handle, TrayMethods};
+use log::error;
 use network_tray::NetworkTray;
 use vpn_tray::VpnTray;
 
@@ -52,8 +53,10 @@ impl TrayManager {
         }
         let mut network_tray = NetworkTray::new();
         network_tray.set_app(self.app.clone());
-        let handle = network_tray.spawn().await.unwrap();
-        self.network_tray_handle = Some(handle);
+        match network_tray.spawn().await {
+            Ok(handle) => self.network_tray_handle = Some(handle),
+            Err(e) => error!("Error creating network tray: {:?}", e),
+        };
     }
 
     async fn create_vpn_tray(&mut self) {
