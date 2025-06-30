@@ -1,6 +1,6 @@
 use std::ops::ControlFlow;
 
-use log::{error, info};
+use log::{error, info, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::{
@@ -335,14 +335,25 @@ impl App {
                         .await;
                 }
                 DeviceType::Ethernet => {
-                    let active_connection = device.active_connection().await.unwrap();
-                    let on = matches!(
-                        active_connection.state().await.unwrap(),
-                        ActiveConnectionState::Activated
-                    );
-                    tray_manager
-                        .update(TrayUpdate::Wired(WiredState { on }))
-                        .await;
+                    let active_connection = match device.active_connection().await {
+                        Ok(active_connection) => active_connection,
+                        Err(e) => {
+                            error!("Failed to get active connection: {}", e);
+                            return ControlFlow::Break(());
+                        }
+                    };
+
+                    match active_connection.state().await {
+                        Ok(state) => {
+                            let on = matches!(state, ActiveConnectionState::Activated);
+                            tray_manager
+                                .update(TrayUpdate::Wired(WiredState { on }))
+                                .await;
+                        }
+                        Err(e) => {
+                            warn!("Failed to get active connection state: {}", e);
+                        }
+                    };
                 }
                 DeviceType::WireGuard => {
                     let wire_guard_connection = device.active_connection().await.unwrap();
