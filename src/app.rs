@@ -321,18 +321,22 @@ impl App {
                     // 3. name alphabetically
 
                     let active_connection = device.active_connection().await.unwrap();
-                    let on = matches!(
-                        active_connection.state().await.unwrap(),
-                        ActiveConnectionState::Activated
-                    );
+                    match active_connection.state().await {
+                        Ok(state) => {
+                            let on = matches!(state, ActiveConnectionState::Activated);
 
-                    tray_manager
-                        .update(TrayUpdate::Wireless(WifiState {
-                            on,
-                            known_connections,
-                            available_connections,
-                        }))
-                        .await;
+                            tray_manager
+                                .update(TrayUpdate::Wireless(WifiState {
+                                    on,
+                                    known_connections,
+                                    available_connections,
+                                }))
+                                .await;
+                        }
+                        Err(e) => {
+                            warn!("WiFi: Failed to get active connection state: {}", e);
+                        }
+                    }
                 }
                 DeviceType::Ethernet => {
                     let active_connection = match device.active_connection().await {
@@ -360,17 +364,22 @@ impl App {
                     let wire_guard_connection_id = wire_guard_connection.id().await.unwrap();
 
                     let active_connection = device.active_connection().await.unwrap();
-                    let on = matches!(
-                        active_connection.state().await.unwrap(),
-                        ActiveConnectionState::Activated
-                    );
 
-                    tray_manager
-                        .update(TrayUpdate::Vpn(VPNState {
-                            on,
-                            active_connection: wire_guard_connection_id.clone(),
-                        }))
-                        .await;
+                    match active_connection.state().await {
+                        Ok(state) => {
+                            let on = matches!(state, ActiveConnectionState::Activated);
+
+                            tray_manager
+                                .update(TrayUpdate::Vpn(VPNState {
+                                    on,
+                                    active_connection: wire_guard_connection_id.clone(),
+                                }))
+                                .await;
+                        }
+                        Err(e) => {
+                            warn!("WireGuard: Failed to get active connection state: {}", e);
+                        }
+                    }
                 }
                 _ => {}
             }
