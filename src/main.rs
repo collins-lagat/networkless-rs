@@ -3,7 +3,7 @@ mod interfaces;
 mod network;
 mod trays;
 
-use std::{fs::File, path::Path};
+use std::{fs::File, panic, path::Path};
 
 use anyhow::{Result, bail};
 use app::{Action, App, Event};
@@ -31,6 +31,10 @@ async fn main() -> Result<()> {
         eprintln!("Failed to initialize logging: {}", e);
         std::process::exit(1);
     }
+
+    panic::set_hook(Box::new(|info| {
+        error!("Unhandled panic: {}", info);
+    }));
 
     let runtime_dir = match std::env::var("XDG_RUNTIME_DIR") {
         Ok(dir) => dir,
