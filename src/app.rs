@@ -237,7 +237,7 @@ impl App {
             let device_type = match device.device_type().await {
                 Ok(device_type) => device_type,
                 Err(e) => {
-                    error!("Failed to get device type: {}", e);
+                    warn!("Failed to get device type: {}", e);
                     continue;
                 }
             };
@@ -285,7 +285,7 @@ impl App {
             let device_type = match device.device_type().await {
                 Ok(device_type) => device_type,
                 Err(e) => {
-                    error!("Failed to get device type: {}", e);
+                    warn!("Failed to get device type: {}", e);
                     continue;
                 }
             };
