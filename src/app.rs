@@ -9,10 +9,7 @@ use crate::{
         enums::{ActiveConnectionState, DeviceType, NmConnectivityState, NmState},
         network_manager::NetworkManager,
     },
-    trays::{
-        AirplaneModeState, Icon, TrayManager, TrayUpdate, VPNState, WifiConnection, WifiState,
-        WiredState,
-    },
+    trays::{AirplaneModeState, Icon, TrayManager, TrayUpdate, VPNState, WifiState, WiredState},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -302,22 +299,16 @@ impl App {
                     };
 
                     let configured_connections = device.available_connections().await.unwrap();
-                    let futures = configured_connections.iter().map(|setting| async {
-                        WifiConnection {
-                            id: setting.id().await.unwrap(),
-                            strength: 0,
-                        }
-                    });
+                    let futures = configured_connections
+                        .iter()
+                        .map(|setting| async { setting.id().await.unwrap() });
 
                     let known_connections = futures::future::join_all(futures).await;
 
                     let mut access_points = wireless_device.access_points().await.unwrap();
-                    let futures = access_points.iter_mut().map(|ap| async {
-                        WifiConnection {
-                            id: ap.id().await.unwrap().into(),
-                            strength: ap.strength().await.unwrap(),
-                        }
-                    });
+                    let futures = access_points
+                        .iter_mut()
+                        .map(|ap| async { ap.id().await.unwrap().into() });
                     let available_connections = futures::future::join_all(futures).await;
                     // TODO: sort access points by:
                     // 1. known connections

@@ -9,7 +9,7 @@ use crate::app::App;
 mod airplane_mode_tray;
 mod network_tray;
 mod vpn_tray;
-pub use network_tray::{AirplaneModeState, Icon, VPNState, WifiConnection, WifiState, WiredState};
+pub use network_tray::{AirplaneModeState, Icon, VPNState, WifiState, WiredState};
 
 pub enum TrayUpdate {
     Icon(Icon),

@@ -21,16 +21,10 @@ pub enum Icon {
 }
 
 #[derive(Debug, Clone)]
-pub struct WifiConnection {
-    pub id: String,
-    pub strength: u8,
-}
-
-#[derive(Debug, Clone)]
 pub struct WifiState {
     pub on: bool,
-    pub available_connections: Vec<WifiConnection>,
-    pub known_connections: Vec<WifiConnection>,
+    pub available_connections: Vec<String>,
+    pub known_connections: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -188,7 +182,7 @@ impl ksni::Tray for NetworkTray {
                 .known_connections
                 .iter()
                 .map(|connection| RadioItem {
-                    label: connection.id.clone(),
+                    label: connection.into(),
                     ..Default::default()
                 })
                 .collect::<Vec<RadioItem>>();
@@ -226,14 +220,14 @@ impl ksni::Tray for NetworkTray {
                 .into(),
             ];
 
-            let ssid = wifi_state.known_connections[0].id.clone();
+            let ssid = wifi_state.known_connections[0].clone();
 
             let mut available_connections = wifi_state
                 .available_connections
                 .iter()
                 .map(|connection| {
                     StandardItem {
-                        label: connection.id.clone(),
+                        label: connection.into(),
                         enabled: false,
                         ..Default::default()
                     }
