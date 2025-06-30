@@ -30,6 +30,7 @@ pub struct WifiConnection {
 pub struct WifiState {
     pub on: bool,
     pub available_connections: Vec<WifiConnection>,
+    pub known_connections: Vec<WifiConnection>,
 }
 
 #[derive(Debug, Clone)]
@@ -184,49 +185,66 @@ impl ksni::Tray for NetworkTray {
 
         if let Some(wifi_state) = &self.wifi_state {
             let options = wifi_state
-                .available_connections
+                .known_connections
                 .iter()
                 .map(|connection| RadioItem {
                     label: connection.id.clone(),
                     ..Default::default()
                 })
                 .collect::<Vec<RadioItem>>();
+            let mut submenu = vec![
+                CheckmarkItem {
+                    label: "On".into(),
+                    checked: wifi_state.on,
+                    activate: Box::new(|this: &mut Self| {
+                        if let Some(app) = this.app.as_ref() {
+                            app.send_action_blocking(Action::ToggleWifi);
+                        }
+                    }),
+                    ..Default::default()
+                }
+                .into(),
+                MenuItem::Separator,
+                RadioGroup {
+                    selected: 0,
+                    options,
+                    select: Box::new(|this: &mut Self, current| {
+                        if let Some(app) = this.app.as_ref() {
+                            app.send_action_blocking(Action::ChangeAccessPoint(
+                                current.to_string(),
+                            ));
+                        }
+                    }),
+                }
+                .into(),
+                MenuItem::Separator,
+                StandardItem {
+                    label: "Available Networks".to_string(),
+                    enabled: false,
+                    ..Default::default()
+                }
+                .into(),
+            ];
+
+            let mut available_connections = wifi_state
+                .available_connections
+                .iter()
+                .map(|connection| {
+                    StandardItem {
+                        label: connection.id.clone(),
+                        enabled: false,
+                        ..Default::default()
+                    }
+                    .into()
+                })
+                .collect::<Vec<MenuItem<Self>>>();
+
+            submenu.append(&mut available_connections);
 
             menu.push(
                 SubMenu {
                     label: "WiFi: [placeholder]".into(),
-                    submenu: vec![
-                        CheckmarkItem {
-                            label: "On".into(),
-                            checked: wifi_state.on,
-                            activate: Box::new(|this: &mut Self| {
-                                if let Some(app) = this.app.as_ref() {
-                                    app.send_action_blocking(Action::ToggleWifi);
-                                }
-                            }),
-                            ..Default::default()
-                        }
-                        .into(),
-                        MenuItem::Separator,
-                        StandardItem {
-                            label: "Available Networks".to_string(),
-                            enabled: false,
-                            ..Default::default()
-                        }
-                        .into(),
-                        RadioGroup {
-                            selected: 0,
-                            options,
-                            select: Box::new(|this: &mut Self, current| {
-                                if let Some(app) = this.app.as_ref() {
-                                    app.send_action_blocking(Action::ChangeAccessPoint(
-                                        current.to_string(),
-                                    ));
-                                }
-                            }),
-                        }
-                        .into(),
-                    ],
+                    submenu,
                     ..Default::default()
                 }
                 .into(),

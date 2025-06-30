@@ -297,6 +297,16 @@ impl App {
                         _ => return ControlFlow::Break(()),
                     };
 
+                    let configured_connections = device.available_connections().await.unwrap();
+                    let futures = configured_connections.iter().map(|setting| async {
+                        WifiConnection {
+                            id: setting.id().await.unwrap(),
+                            strength: 0,
+                        }
+                    });
+
+                    let known_connections = futures::future::join_all(futures).await;
+
                     let mut access_points = wireless_device.access_points().await.unwrap();
                     let futures = access_points.iter_mut().map(|ap| async {
                         WifiConnection {
@@ -313,6 +323,7 @@ impl App {
                     tray_manager
                         .update(TrayUpdate::Wireless(WifiState {
                             on: true,
+                            known_connections,
                             available_connections,
                         }))
                         .await;
