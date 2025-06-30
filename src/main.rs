@@ -9,7 +9,7 @@ use anyhow::{Result, bail};
 use app::{Action, App, Event};
 use fs2::FileExt;
 use futures::StreamExt;
-use log::{LevelFilter, error, info};
+use log::{LevelFilter, error, info, warn};
 use network::network_manager::NetworkManager;
 use signal_hook::consts::{SIGINT, SIGTERM};
 use signal_hook_tokio::Signals;
@@ -19,7 +19,7 @@ use tokio::{
     sync::mpsc::{Sender, channel},
 };
 use trays::TrayManager;
-use zbus::Connection;
+use zbus::{Connection, Proxy};
 
 pub const APP_ID: &str = "com.collinslagat.applets.networkless";
 const LOCK_FILE: &str = "networkless.lock";
@@ -57,6 +57,8 @@ async fn main() -> Result<()> {
     }
 
     info!("Lock acquired");
+
+    wait_for_session_bus_and_status_notifier().await?;
 
     let (event_tx, event_rx) = channel::<Event>(32);
     let (action_tx, action_rx) = channel::<Action>(32);
@@ -132,4 +134,52 @@ fn setup_logging() -> Result<()> {
     };
 
     Ok(())
+}
+
+async fn wait_for_session_bus_and_status_notifier() -> Result<()> {
+    // Give up after 20 attempts spanning 100ms each for a total of 2s
+    let max_attempts = 20;
+
+    for attempt in 0..max_attempts {
+        match Connection::session().await {
+            Ok(connection) => {
+                let status_notifier = Proxy::new(
+                    &connection,
+                    "org.kde.StatusNotifierWatcher",
+                    "/StatusNotifierWatcher",
+                    "org.kde.StatusNotifierWatcher",
+                )
+                .await?;
+
+                match status_notifier
+                    .get_property::<bool>("IsStatusNotifierHostRegistered")
+                    .await
+                {
+                    Ok(_) => {
+                        info!(
+                            "Status notifier is available! (attempt {}/{})",
+                            attempt, max_attempts
+                        );
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        warn!(
+                            "Failed to get IsStatusNotifierHostRegistered: {} (attempt {}/{})",
+                            e, attempt, max_attempts
+                        );
+                    }
+                };
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to connect to session bus: {} (attempt {}/{})",
+                    e, attempt, max_attempts
+                );
+            }
+        }
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+
+    Err(anyhow::anyhow!("Failed to connect to session bus"))
 }
