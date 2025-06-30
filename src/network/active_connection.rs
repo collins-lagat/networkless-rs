@@ -1,10 +1,11 @@
+use anyhow::Result as AnyResult;
 use futures::StreamExt;
 use log::info;
 use zbus::Result;
 
-use crate::interfaces::{
-    active::{ActiveProxy, StateChanged},
-    device::DeviceProxy,
+use crate::{
+    interfaces::{active::ActiveProxy, device::DeviceProxy},
+    network::enums::ActiveConnectionState,
 };
 
 use super::device::Device;
@@ -50,16 +51,27 @@ impl ActiveConnection {
         Ok(out)
     }
 
-    pub async fn listening_to_state_changes<F>(&self, f: F) -> Result<()>
+    pub async fn listening_to_state_changes<F>(&self, f: F) -> AnyResult<()>
     where
-        F: AsyncFnOnce(StateChanged) -> () + Send + Copy,
+        F: AsyncFnOnce(ActiveConnectionState) -> () + Send + Copy,
     {
         let mut stream = self
             .active_connection
             .receive_state_changed_signal()
             .await?;
-        while let Some(state) = stream.next().await {
+
+        while let Some(state_changed) = stream.next().await {
             info!("Active Connection State changed");
+
+            let state = match state_changed.args() {
+                Ok(state) => state.state().to_owned(),
+                Err(e) => {
+                    anyhow::bail!("Failed to get StateChanged arguments: {e}");
+                }
+            };
+
+            let state = ActiveConnectionState::from(state);
+
             f(state).await;
         }
         Ok(())

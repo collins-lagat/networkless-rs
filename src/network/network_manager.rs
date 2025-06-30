@@ -5,15 +5,14 @@ use log::info;
 use tokio::process::Command;
 use zbus::Connection;
 use zbus::Result as ZbusResult;
+use zbus::zvariant::ObjectPath;
 
 use super::active_connection::ActiveConnection;
 use super::device::Device;
+use super::devices::SpecificDevice;
 use super::enums::NmConnectivityState;
 use super::enums::NmState;
 use crate::interfaces::active::ActiveProxy;
-use crate::interfaces::network_manager::DeviceAdded;
-use crate::interfaces::network_manager::DeviceRemoved;
-use crate::interfaces::network_manager::StateChanged;
 use crate::interfaces::{device::DeviceProxy, network_manager::NetworkManagerProxy};
 
 #[derive(Debug, Clone)]
@@ -30,11 +29,20 @@ impl NetworkManager {
 
     pub async fn listening_to_state_changes<F>(&self, f: F) -> Result<()>
     where
-        F: AsyncFnOnce(StateChanged) -> () + Send + Copy,
+        F: AsyncFnOnce(NmState) -> () + Send + Copy,
     {
         let mut stream = self.nm.receive_state_changed_signal().await?;
-        while let Some(state) = stream.next().await {
+        while let Some(state_changed) = stream.next().await {
             info!("State changed");
+            let state = match state_changed.args() {
+                Ok(args) => args.state().to_owned(),
+                Err(e) => {
+                    anyhow::bail!("Failed to get StateChanged arguments: {e}");
+                }
+            };
+
+            let state = NmState::from(state);
+
             f(state).await;
         }
         Ok(())
@@ -42,24 +50,70 @@ impl NetworkManager {
 
     pub async fn listening_to_device_added<F>(&self, f: F) -> Result<()>
     where
-        F: AsyncFnOnce(DeviceAdded) -> () + Send + Copy,
+        F: AsyncFnOnce(SpecificDevice) -> () + Send + Copy,
     {
         let mut stream = self.nm.receive_device_added().await?;
-        while let Some(state) = stream.next().await {
+
+        // Idea from https://github.com/pop-os/cosmic-settings/blob/bd46f922155f6df172096f0f86f144968903c380/cosmic-settings/src/pages/power/backend/mod.rs#L491
+        while let Some(device_added) = stream.next().await {
+            let device_path: ObjectPath<'static> = match device_added.args() {
+                Ok(args) => args.device_path().to_owned(),
+                Err(e) => {
+                    anyhow::bail!("Failed to get DeviceAdded arguments: {e}");
+                }
+            };
+
+            let device = match DeviceProxy::builder(&self.connection)
+                .path(&device_path)
+                .unwrap()
+                .build()
+                .await
+            {
+                Ok(device_proxy) => {
+                    let device = Device::new(device_proxy);
+                    info!("Device added: {device:?}");
+                    device.to_specific_device().await.unwrap()
+                }
+                Err(e) => {
+                    anyhow::bail!("Failed to build DeviceProxy: {e}");
+                }
+            };
+            f(device).await;
             info!("Device added");
-            f(state).await;
         }
         Ok(())
     }
 
     pub async fn listening_to_device_removed<F>(&self, f: F) -> Result<()>
     where
-        F: AsyncFnOnce(DeviceRemoved) -> () + Send + Copy,
+        F: AsyncFnOnce(SpecificDevice) -> () + Send + Copy,
     {
         let mut stream = self.nm.receive_device_removed().await?;
-        while let Some(state) = stream.next().await {
+        while let Some(device_removed) = stream.next().await {
             info!("Device removed");
-            f(state).await;
+            let device_path: ObjectPath<'static> = match device_removed.args() {
+                Ok(args) => args.device_path().to_owned(),
+                Err(e) => {
+                    anyhow::bail!("Failed to get DeviceRemoved arguments: {e}");
+                }
+            };
+
+            let device = match DeviceProxy::builder(&self.connection)
+                .path(&device_path)
+                .unwrap()
+                .build()
+                .await
+            {
+                Ok(device_proxy) => {
+                    let device = Device::new(device_proxy);
+                    info!("Device removed: {device:?}");
+                    device.to_specific_device().await.unwrap()
+                }
+                Err(e) => {
+                    anyhow::bail!("Failed to build DeviceProxy: {e}");
+                }
+            };
+            f(device).await;
         }
         Ok(())
     }
