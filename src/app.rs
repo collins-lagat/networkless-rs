@@ -134,6 +134,10 @@ impl App {
     }
 
     async fn update(&self, tray_manager: &mut TrayManager) -> ControlFlow<()> {
+        tray_manager.update(TrayUpdate::Wireless(None)).await;
+        tray_manager.update(TrayUpdate::Wired(None)).await;
+        tray_manager.update(TrayUpdate::Vpn(None)).await;
+
         let state = match self.network_manager.state().await {
             Ok(state) => state,
             Err(e) => {
@@ -326,11 +330,11 @@ impl App {
                             let on = matches!(state, ActiveConnectionState::Activated);
 
                             tray_manager
-                                .update(TrayUpdate::Wireless(WifiState {
+                                .update(TrayUpdate::Wireless(Some(WifiState {
                                     on,
                                     known_connections,
                                     available_connections,
-                                }))
+                                })))
                                 .await;
                         }
                         Err(e) => {
@@ -351,7 +355,7 @@ impl App {
                         Ok(state) => {
                             let on = matches!(state, ActiveConnectionState::Activated);
                             tray_manager
-                                .update(TrayUpdate::Wired(WiredState { on }))
+                                .update(TrayUpdate::Wired(Some(WiredState { on })))
                                 .await;
                         }
                         Err(e) => {
@@ -370,10 +374,10 @@ impl App {
                             let on = matches!(state, ActiveConnectionState::Activated);
 
                             tray_manager
-                                .update(TrayUpdate::Vpn(VPNState {
+                                .update(TrayUpdate::Vpn(Some(VPNState {
                                     on,
                                     active_connection: wire_guard_connection_id.clone(),
-                                }))
+                                })))
                                 .await;
                         }
                         Err(e) => {

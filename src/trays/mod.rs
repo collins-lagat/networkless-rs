@@ -13,9 +13,9 @@ pub use network_tray::{AirplaneModeState, Icon, VPNState, WifiConnection, WifiSt
 
 pub enum TrayUpdate {
     Icon(Icon),
-    Wireless(WifiState),
-    Wired(WiredState),
-    Vpn(VPNState),
+    Wireless(Option<WifiState>),
+    Wired(Option<WiredState>),
+    Vpn(Option<VPNState>),
     AirplaneMode(AirplaneModeState),
 }
 
@@ -90,7 +90,7 @@ impl TrayManager {
         }
     }
 
-    async fn update_wireless(&mut self, state: WifiState) {
+    async fn update_wireless(&mut self, state: Option<WifiState>) {
         if self.network_tray_handle.is_none() {
             self.create_network_tray().await;
         }
@@ -98,13 +98,13 @@ impl TrayManager {
         if let Some(network_tray_handle) = &mut self.network_tray_handle {
             network_tray_handle
                 .update(|tray| {
-                    tray.set_wifi_state(Some(state.clone()));
+                    tray.set_wifi_state(state);
                 })
                 .await;
         }
     }
 
-    async fn update_wired(&mut self, state: WiredState) {
+    async fn update_wired(&mut self, state: Option<WiredState>) {
         if self.network_tray_handle.is_none() {
             self.create_network_tray().await;
         }
@@ -112,13 +112,13 @@ impl TrayManager {
         if let Some(network_tray_handle) = &mut self.network_tray_handle {
             network_tray_handle
                 .update(|tray| {
-                    tray.set_wired_state(Some(state.clone()));
+                    tray.set_wired_state(state);
                 })
                 .await;
         }
     }
 
-    async fn update_vpn(&mut self, state: VPNState) {
+    async fn update_vpn(&mut self, state: Option<VPNState>) {
         // if self.vpn_tray_handle.is_none() {
         //     self.create_vpn_tray().await;
         // }
@@ -138,7 +138,7 @@ impl TrayManager {
         if let Some(network_tray_handle) = &mut self.network_tray_handle {
             network_tray_handle
                 .update(|tray| {
-                    tray.set_vpn_state(Some(state.clone()));
+                    tray.set_vpn_state(state);
                 })
                 .await;
         }
