@@ -351,7 +351,7 @@ impl App {
                                 .await;
                         }
                         Err(e) => {
-                            warn!("Failed to get active connection state: {}", e);
+                            warn!("Ethernet: Failed to get active connection state: {}", e);
                         }
                     };
                 }
