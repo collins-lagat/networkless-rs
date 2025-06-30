@@ -67,7 +67,12 @@ impl Device {
     // }
 
     pub async fn to_specific_device(&self) -> Option<SpecificDevice> {
-        match self.device_type().await.unwrap() {
+        let device_type = match self.device_type().await {
+            Ok(device_type) => device_type,
+            Err(_) => return None,
+        };
+
+        match device_type {
             DeviceType::Wifi => {
                 let connection = self.device.inner().connection();
                 let path = self.device.inner().path().clone();

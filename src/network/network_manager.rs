@@ -69,16 +69,20 @@ impl NetworkManager {
                 .build()
                 .await
             {
-                Ok(device_proxy) => {
-                    let device = Device::new(device_proxy);
-                    info!("Device added: {device:?}");
-                    device.to_specific_device().await.unwrap()
-                }
+                Ok(device_proxy) => Device::new(device_proxy),
                 Err(e) => {
                     anyhow::bail!("Failed to build DeviceProxy: {e}");
                 }
             };
+            let device = match device.to_specific_device().await {
+                Some(device) => device,
+                None => {
+                    continue;
+                }
+            };
+
             f(device).await;
+
             info!("Device added");
         }
         Ok(())
@@ -104,15 +108,19 @@ impl NetworkManager {
                 .build()
                 .await
             {
-                Ok(device_proxy) => {
-                    let device = Device::new(device_proxy);
-                    info!("Device removed: {device:?}");
-                    device.to_specific_device().await.unwrap()
-                }
+                Ok(device_proxy) => Device::new(device_proxy),
                 Err(e) => {
                     anyhow::bail!("Failed to build DeviceProxy: {e}");
                 }
             };
+
+            let device = match device.to_specific_device().await {
+                Some(device) => device,
+                None => {
+                    continue;
+                }
+            };
+
             f(device).await;
         }
         Ok(())
