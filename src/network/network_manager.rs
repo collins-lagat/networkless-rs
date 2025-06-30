@@ -50,7 +50,7 @@ impl NetworkManager {
 
     pub async fn listening_to_device_added<F>(&self, f: F) -> Result<()>
     where
-        F: AsyncFnOnce(SpecificDevice) -> () + Send + Copy,
+        F: AsyncFnOnce(Option<SpecificDevice>) -> () + Send + Copy,
     {
         let mut stream = self.nm.receive_device_added().await?;
 
@@ -69,15 +69,9 @@ impl NetworkManager {
                 .build()
                 .await
             {
-                Ok(device_proxy) => Device::new(device_proxy),
+                Ok(device_proxy) => Device::new(device_proxy).to_specific_device().await,
                 Err(e) => {
                     anyhow::bail!("Failed to build DeviceProxy: {e}");
-                }
-            };
-            let device = match device.to_specific_device().await {
-                Some(device) => device,
-                None => {
-                    continue;
                 }
             };
 
@@ -90,7 +84,7 @@ impl NetworkManager {
 
     pub async fn listening_to_device_removed<F>(&self, f: F) -> Result<()>
     where
-        F: AsyncFnOnce(SpecificDevice) -> () + Send + Copy,
+        F: AsyncFnOnce(Option<SpecificDevice>) -> () + Send + Copy,
     {
         let mut stream = self.nm.receive_device_removed().await?;
         while let Some(device_removed) = stream.next().await {
@@ -108,16 +102,9 @@ impl NetworkManager {
                 .build()
                 .await
             {
-                Ok(device_proxy) => Device::new(device_proxy),
+                Ok(device_proxy) => Device::new(device_proxy).to_specific_device().await,
                 Err(e) => {
                     anyhow::bail!("Failed to build DeviceProxy: {e}");
-                }
-            };
-
-            let device = match device.to_specific_device().await {
-                Some(device) => device,
-                None => {
-                    continue;
                 }
             };
 
