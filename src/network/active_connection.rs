@@ -24,12 +24,12 @@ impl ActiveConnection {
         self.active_connection.id().await
     }
 
-    // pub async fn state(&self) -> Result<ActiveConnectionState> {
-    //     self.active_connection
-    //         .state()
-    //         .await
-    //         .map(ActiveConnectionState::from)
-    // }
+    pub async fn state(&self) -> Result<ActiveConnectionState> {
+        self.active_connection
+            .state()
+            .await
+            .map(ActiveConnectionState::from)
+    }
 
     // pub async fn device_type(&self) -> Result<DeviceType> {
     //     self.active_connection.type_().await.map(DeviceType::from)

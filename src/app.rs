@@ -6,7 +6,7 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use crate::{
     network::{
         devices::SpecificDevice,
-        enums::{DeviceType, NmConnectivityState, NmState},
+        enums::{ActiveConnectionState, DeviceType, NmConnectivityState, NmState},
         network_manager::NetworkManager,
     },
     trays::{
@@ -320,9 +320,15 @@ impl App {
                     // 2. strength
                     // 3. name alphabetically
 
+                    let active_connection = device.active_connection().await.unwrap();
+                    let state = matches!(
+                        active_connection.state().await.unwrap(),
+                        ActiveConnectionState::Activated
+                    );
+
                     tray_manager
                         .update(TrayUpdate::Wireless(WifiState {
-                            on: true,
+                            on: state,
                             known_connections,
                             available_connections,
                         }))
