@@ -321,31 +321,42 @@ impl App {
                     // 3. name alphabetically
 
                     let active_connection = device.active_connection().await.unwrap();
-                    let state = matches!(
+                    let on = matches!(
                         active_connection.state().await.unwrap(),
                         ActiveConnectionState::Activated
                     );
 
                     tray_manager
                         .update(TrayUpdate::Wireless(WifiState {
-                            on: state,
+                            on,
                             known_connections,
                             available_connections,
                         }))
                         .await;
                 }
                 DeviceType::Ethernet => {
+                    let active_connection = device.active_connection().await.unwrap();
+                    let on = matches!(
+                        active_connection.state().await.unwrap(),
+                        ActiveConnectionState::Activated
+                    );
                     tray_manager
-                        .update(TrayUpdate::Wired(WiredState { on: true }))
+                        .update(TrayUpdate::Wired(WiredState { on }))
                         .await;
                 }
                 DeviceType::WireGuard => {
                     let wire_guard_connection = device.active_connection().await.unwrap();
                     let wire_guard_connection_id = wire_guard_connection.id().await.unwrap();
 
+                    let active_connection = device.active_connection().await.unwrap();
+                    let on = matches!(
+                        active_connection.state().await.unwrap(),
+                        ActiveConnectionState::Activated
+                    );
+
                     tray_manager
                         .update(TrayUpdate::Vpn(VPNState {
-                            on: true,
+                            on,
                             active_connection: wire_guard_connection_id.clone(),
                         }))
                         .await;
