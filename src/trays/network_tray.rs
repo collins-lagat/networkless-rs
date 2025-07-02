@@ -216,7 +216,10 @@ impl ksni::Tray for NetworkTray {
                 .into(),
             ];
 
-            let ssid = wifi_state.known_connections[0].clone();
+            let label = match wifi_state.known_connections.first() {
+                Some(ssid) => format!("WiFi: {}", ssid),
+                None => "WiFi".into(),
+            };
 
             let mut available_connections = wifi_state
                 .available_connections
@@ -235,7 +238,7 @@ impl ksni::Tray for NetworkTray {
 
             menu.push(
                 SubMenu {
-                    label: format!("WiFi: {}", ssid),
+                    label,
                     submenu,
                     ..Default::default()
                 }
