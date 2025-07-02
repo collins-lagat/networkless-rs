@@ -119,6 +119,11 @@ impl NetworkManager {
         let mut out = Vec::with_capacity(devices.len());
 
         for device in devices {
+            // BUG: It's possible for device to be an ObjectPath("/") which means that the device
+            // is not set. This will cause panics when you try to acess properties
+            // and call methods on it. Until this is fixed, we need to check if the device
+            // doesn't throw an error on any of the methods.
+            // In the future, invalid devices will probably be filtered out from the list
             let device = DeviceProxy::builder(&self.connection)
                 .path(device)?
                 .build()
@@ -138,6 +143,13 @@ impl NetworkManager {
     }
 
     pub async fn primary_connection(&self) -> ZbusResult<ActiveConnection> {
+        // BUG: It's possible for self.nm.primary_connection() to return an ObjectPath("/") which means that an
+        // active connection is not set. This will cause panics when you try to acess properties
+        // and call methods on it. Until this is fixed, we need to check if the active connection
+        // doesn't throw an error on any of the methods.
+        // In the future, this will probably return an Option<ActiveConnection> instead of
+        // a Result<ActiveConnection> and handle the error in the caller.
+
         let primary_connection = self.nm.primary_connection().await?;
         let primary_connection = ActiveProxy::builder(&self.connection)
             .path(primary_connection)?

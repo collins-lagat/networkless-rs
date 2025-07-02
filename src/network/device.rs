@@ -31,6 +31,12 @@ impl Device {
     }
 
     pub async fn active_connection(&self) -> Result<ActiveConnection> {
+        // BUG: It's possible for self.device.connection() to return an ObjectPath("/") which means that the
+        // active connection is not set. This will cause panics when you try to acess properties
+        // and call methods on it. Until this is fixed, we need to check if the active connection
+        // doesn't throw an error on any of the methods.
+        // In the future, this will probably return an Option<ActiveConnection> instead of
+        // a Result<ActiveConnection> and handle the error in the caller.
         let active_connection = self.device.active_connection().await?;
         let active_connection = ActiveProxy::builder(self.device.inner().connection())
             .path(active_connection)?
