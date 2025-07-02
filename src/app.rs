@@ -137,6 +137,7 @@ impl App {
         tray_manager.update(TrayUpdate::Wireless(None)).await;
         tray_manager.update(TrayUpdate::Wired(None)).await;
         tray_manager.update(TrayUpdate::Vpn(None)).await;
+        tray_manager.update(TrayUpdate::AirplaneMode(None)).await;
 
         let state = match self.network_manager.state().await {
             Ok(state) => state,
