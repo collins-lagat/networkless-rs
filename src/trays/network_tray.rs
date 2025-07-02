@@ -187,6 +187,12 @@ impl ksni::Tray for NetworkTray {
                     ..Default::default()
                 })
                 .collect::<Vec<RadioItem>>();
+
+            let available_connections_label = match wifi_state.available_connections.len() {
+                0 => "No Networks Available",
+                _ => "Available Networks",
+            };
+
             let mut submenu = vec![
                 CheckmarkItem {
                     label: "On".into(),
@@ -209,7 +215,7 @@ impl ksni::Tray for NetworkTray {
                 .into(),
                 MenuItem::Separator,
                 StandardItem {
-                    label: "Available Networks".to_string(),
+                    label: available_connections_label.into(),
                     enabled: false,
                     ..Default::default()
                 }
