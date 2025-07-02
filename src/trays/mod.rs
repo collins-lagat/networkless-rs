@@ -135,9 +135,10 @@ impl TrayManager {
             return;
         }
 
-        if state.is_none() && self.network_tray_handle.is_some() {
-            self.network_tray_handle.as_mut().unwrap().shutdown();
-            self.network_tray_handle = None;
+        if state.is_none() && self.vpn_tray_handle.is_some() {
+            self.vpn_tray_handle.as_mut().unwrap().shutdown();
+            self.vpn_tray_handle = None;
+            return;
         }
 
         if self.vpn_tray_handle.is_none() {
