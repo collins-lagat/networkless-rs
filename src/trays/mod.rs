@@ -17,7 +17,7 @@ pub enum TrayUpdate {
     Wireless(Option<WifiState>),
     Wired(Option<WiredState>),
     Vpn(Option<VPNState>),
-    AirplaneMode(AirplaneModeState),
+    AirplaneMode(Option<AirplaneModeState>),
 }
 
 pub struct TrayManager {
@@ -71,8 +71,7 @@ impl TrayManager {
         if self.airplane_mode_tray_handle.is_some() {
             return;
         }
-        let mut airplane_mode_tray = AirplaneModeTray::new();
-        airplane_mode_tray.set_app(self.app.clone());
+        let airplane_mode_tray = AirplaneModeTray::new(self.app.clone());
         let handle = airplane_mode_tray.spawn().await.unwrap();
         self.airplane_mode_tray_handle = Some(handle);
     }
@@ -154,19 +153,7 @@ impl TrayManager {
         }
     }
 
-    async fn update_airplane_mode(&mut self, state: AirplaneModeState) {
-        // if self.airplane_mode_tray_handle.is_none() {
-        //     self.create_airplane_mode_tray().await;
-        // }
-        //
-        // if let Some(airplane_mode_tray_handle) = &mut self.airplane_mode_tray_handle {
-        //     airplane_mode_tray_handle
-        //         .update(|_tray| {
-        //             todo!("update airplane mode tray");
-        //         })
-        //         .await;
-        // }
-
+    async fn update_airplane_mode(&mut self, state: Option<AirplaneModeState>) {
         if self.network_tray_handle.is_none() {
             self.create_network_tray().await;
         }
@@ -174,9 +161,23 @@ impl TrayManager {
         if let Some(network_tray_handle) = &mut self.network_tray_handle {
             network_tray_handle
                 .update(|tray| {
-                    tray.set_airplane_mode_state(Some(state.clone()));
+                    tray.set_airplane_mode_state(state.clone());
                 })
                 .await;
+        }
+
+        if let Some(state) = state {
+            if state.on {
+                self.create_airplane_mode_tray().await;
+            } else {
+                self.airplane_mode_tray_handle.as_mut().unwrap().shutdown();
+                self.airplane_mode_tray_handle = None;
+            }
+        }
+
+        if self.airplane_mode_tray_handle.is_none() {
+            self.airplane_mode_tray_handle.as_mut().unwrap().shutdown();
+            self.airplane_mode_tray_handle = None;
         }
     }
 }

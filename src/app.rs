@@ -158,11 +158,15 @@ impl App {
 
         if is_airplane_mode {
             tray_manager
-                .update(TrayUpdate::AirplaneMode(AirplaneModeState { on: true }))
+                .update(TrayUpdate::AirplaneMode(Some(AirplaneModeState {
+                    on: true,
+                })))
                 .await;
         } else {
             tray_manager
-                .update(TrayUpdate::AirplaneMode(AirplaneModeState { on: false }))
+                .update(TrayUpdate::AirplaneMode(Some(AirplaneModeState {
+                    on: false,
+                })))
                 .await;
         }
 

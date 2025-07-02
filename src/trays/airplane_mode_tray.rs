@@ -1,26 +1,30 @@
 use std::sync::LazyLock;
 
-use ksni::{Icon, Tray};
+use ksni::{Icon, Tray, menu::CheckmarkItem};
 
-use crate::{APP_ID, app::App, trays::get_icon_from_image_bytes};
+use crate::{
+    APP_ID,
+    app::{Action, App},
+    trays::get_icon_from_image_bytes,
+};
 
 pub struct AirplaneModeTray {
-    app: Option<App>,
+    app: App,
 }
 
 impl AirplaneModeTray {
-    pub fn new() -> Self {
-        Self { app: None }
-    }
-
-    pub fn set_app(&mut self, app: App) {
-        self.app = Some(app);
+    pub fn new(app: App) -> Self {
+        Self { app }
     }
 }
 
 impl Tray for AirplaneModeTray {
     fn id(&self) -> String {
         format!("{}.AirplaneMode", APP_ID)
+    }
+
+    fn title(&self) -> String {
+        "Airplane Mode".into()
     }
 
     fn icon_pixmap(&self) -> Vec<ksni::Icon> {
@@ -33,5 +37,19 @@ impl Tray for AirplaneModeTray {
         icon.push(AIRPLANE_MODE_ICON.clone());
 
         icon
+    }
+
+    fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
+        vec![
+            CheckmarkItem {
+                label: "On".into(),
+                checked: true,
+                activate: Box::new(|this: &mut Self| {
+                    this.app.send_action_blocking(Action::ToggleAirplaneMode);
+                }),
+                ..Default::default()
+            }
+            .into(),
+        ]
     }
 }
