@@ -327,22 +327,23 @@ impl App {
                     // 3. name alphabetically
 
                     let active_connection = device.active_connection().await.unwrap();
-                    match active_connection.state().await {
+                    let on = match active_connection.state().await {
                         Ok(state) => {
-                            let on = matches!(state, ActiveConnectionState::Activated);
-
-                            tray_manager
-                                .update(TrayUpdate::Wireless(Some(WifiState {
-                                    on,
-                                    known_connections,
-                                    available_connections,
-                                })))
-                                .await;
+                            matches!(state, ActiveConnectionState::Activated)
                         }
                         Err(e) => {
                             warn!("WiFi: Failed to get active connection state: {}", e);
+                            false
                         }
-                    }
+                    };
+
+                    tray_manager
+                        .update(TrayUpdate::Wireless(Some(WifiState {
+                            on,
+                            known_connections,
+                            available_connections,
+                        })))
+                        .await;
                 }
                 DeviceType::Ethernet => {
                     let active_connection = match device.active_connection().await {
