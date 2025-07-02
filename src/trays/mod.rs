@@ -10,7 +10,7 @@ use crate::app::App;
 mod airplane_mode_tray;
 mod network_tray;
 mod vpn_tray;
-pub use network_tray::{AirplaneModeState, Icon, VPNState, WifiState, WiredState};
+pub use network_tray::{AirplaneModeState, Icon, VPNConnection, VPNState, WifiState, WiredState};
 
 pub enum TrayUpdate {
     Icon(Icon),
@@ -51,8 +51,7 @@ impl TrayManager {
         if self.network_tray_handle.is_some() {
             return;
         }
-        let mut network_tray = NetworkTray::new();
-        network_tray.set_app(self.app.clone());
+        let network_tray = NetworkTray::new(self.app.clone());
         match network_tray.spawn().await {
             Ok(handle) => self.network_tray_handle = Some(handle),
             Err(e) => error!("Error creating network tray: {:?}", e),
@@ -63,8 +62,7 @@ impl TrayManager {
         if self.vpn_tray_handle.is_some() {
             return;
         }
-        let mut vpn_tray = VpnTray::new();
-        vpn_tray.set_app(self.app.clone());
+        let vpn_tray = VpnTray::new(self.app.clone());
         let handle = vpn_tray.spawn().await.unwrap();
         self.vpn_tray_handle = Some(handle);
     }
@@ -122,18 +120,6 @@ impl TrayManager {
     }
 
     async fn update_vpn(&mut self, state: Option<VPNState>) {
-        // if self.vpn_tray_handle.is_none() {
-        //     self.create_vpn_tray().await;
-        // }
-        //
-        // if let Some(vpn_tray_handle) = &mut self.vpn_tray_handle {
-        //     vpn_tray_handle
-        //         .update(|_tray| {
-        //             todo!("update vpn tray");
-        //         })
-        //         .await;
-        // }
-
         if self.network_tray_handle.is_none() {
             self.create_network_tray().await;
         }
@@ -141,7 +127,28 @@ impl TrayManager {
         if let Some(network_tray_handle) = &mut self.network_tray_handle {
             network_tray_handle
                 .update(|tray| {
-                    tray.set_vpn_state(state);
+                    tray.set_vpn_state(state.clone());
+                })
+                .await;
+        }
+
+        if state.is_none() && self.vpn_tray_handle.is_none() {
+            return;
+        }
+
+        if state.is_none() && self.network_tray_handle.is_some() {
+            self.network_tray_handle.as_mut().unwrap().shutdown();
+            self.network_tray_handle = None;
+        }
+
+        if self.vpn_tray_handle.is_none() {
+            self.create_vpn_tray().await;
+        }
+
+        if let Some(vpn_tray_handle) = &mut self.vpn_tray_handle {
+            vpn_tray_handle
+                .update(|tray| {
+                    tray.set_state(state);
                 })
                 .await;
         }

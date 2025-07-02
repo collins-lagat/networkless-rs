@@ -9,7 +9,10 @@ use crate::{
         enums::{ActiveConnectionState, DeviceType, NmConnectivityState, NmState},
         network_manager::NetworkManager,
     },
-    trays::{AirplaneModeState, Icon, TrayManager, TrayUpdate, VPNState, WifiState, WiredState},
+    trays::{
+        AirplaneModeState, Icon, TrayManager, TrayUpdate, VPNConnection, VPNState, WifiState,
+        WiredState,
+    },
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -25,7 +28,7 @@ pub enum Action {
     ToggleWifi,
     ToggleWired,
     ToggleAirplaneMode,
-    ToggleVPN,
+    ToggleVPN(String),
 }
 
 #[derive(Debug, Clone)]
@@ -282,6 +285,8 @@ impl App {
             }
         };
 
+        let mut vpn_connections = Vec::<VPNConnection>::new();
+
         for device in devices {
             let device_type = match device.device_type().await {
                 Ok(device_type) => device_type,
@@ -363,13 +368,11 @@ impl App {
                     match active_connection.state().await {
                         Ok(state) => {
                             let on = matches!(state, ActiveConnectionState::Activated);
-
-                            tray_manager
-                                .update(TrayUpdate::Vpn(Some(VPNState {
-                                    on,
-                                    active_connection: wire_guard_connection_id.clone(),
-                                })))
-                                .await;
+                            let vpn_connection = VPNConnection {
+                                name: wire_guard_connection_id.clone(),
+                                on,
+                            };
+                            vpn_connections.push(vpn_connection);
                         }
                         Err(e) => {
                             warn!("WireGuard: Failed to get active connection state: {}", e);
@@ -379,6 +382,15 @@ impl App {
                 _ => {}
             }
         }
+
+        if !vpn_connections.is_empty() {
+            tray_manager
+                .update(TrayUpdate::Vpn(Some(VPNState {
+                    connections: vpn_connections,
+                })))
+                .await;
+        }
+
         ControlFlow::Continue(())
     }
 }

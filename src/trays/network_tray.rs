@@ -33,9 +33,14 @@ pub struct WiredState {
 }
 
 #[derive(Debug, Clone)]
-pub struct VPNState {
+pub struct VPNConnection {
+    pub name: String,
     pub on: bool,
-    pub active_connection: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct VPNState {
+    pub connections: Vec<VPNConnection>,
 }
 
 #[derive(Debug, Clone)]
@@ -45,8 +50,8 @@ pub struct AirplaneModeState {
 
 #[derive(Debug, Clone)]
 pub struct NetworkTray {
+    app: App,
     icon: Option<Icon>,
-    app: Option<App>,
     pub wifi_state: Option<WifiState>,
     pub wired_state: Option<WiredState>,
     pub vpn_state: Option<VPNState>,
@@ -54,19 +59,15 @@ pub struct NetworkTray {
 }
 
 impl NetworkTray {
-    pub fn new() -> Self {
+    pub fn new(app: App) -> Self {
         Self {
             icon: None,
-            app: None,
+            app,
             wifi_state: None,
             wired_state: None,
             vpn_state: None,
             airplane_mode_state: None,
         }
-    }
-
-    pub fn set_app(&mut self, app: App) {
-        self.app = Some(app);
     }
 
     pub fn set_icon(&mut self, icon: Icon) {
@@ -191,9 +192,7 @@ impl ksni::Tray for NetworkTray {
                     label: "On".into(),
                     checked: wifi_state.on,
                     activate: Box::new(|this: &mut Self| {
-                        if let Some(app) = this.app.as_ref() {
-                            app.send_action_blocking(Action::ToggleWifi);
-                        }
+                        this.app.send_action_blocking(Action::ToggleWifi);
                     }),
                     ..Default::default()
                 }
@@ -203,11 +202,8 @@ impl ksni::Tray for NetworkTray {
                     selected: 0,
                     options,
                     select: Box::new(|this: &mut Self, current| {
-                        if let Some(app) = this.app.as_ref() {
-                            app.send_action_blocking(Action::ChangeAccessPoint(
-                                current.to_string(),
-                            ));
-                        }
+                        this.app
+                            .send_action_blocking(Action::ChangeAccessPoint(current.to_string()));
                     }),
                 }
                 .into(),
@@ -253,9 +249,7 @@ impl ksni::Tray for NetworkTray {
                     label: "Wired".into(),
                     checked: wired_state.on,
                     activate: Box::new(|this: &mut Self| {
-                        if let Some(app) = this.app.as_ref() {
-                            app.send_action_blocking(Action::ToggleWired);
-                        }
+                        this.app.send_action_blocking(Action::ToggleWired);
                     }),
                     ..Default::default()
                 }
@@ -269,9 +263,7 @@ impl ksni::Tray for NetworkTray {
                     label: "Airplane Mode".into(),
                     checked: airplane_mode_state.on,
                     activate: Box::new(|this: &mut Self| {
-                        if let Some(app) = this.app.as_ref() {
-                            app.send_action_blocking(Action::ToggleAirplaneMode);
-                        }
+                        this.app.send_action_blocking(Action::ToggleAirplaneMode);
                     }),
                     ..Default::default()
                 }
@@ -280,27 +272,27 @@ impl ksni::Tray for NetworkTray {
         }
 
         if let Some(vpn_state) = &self.vpn_state {
+            let connections = vpn_state
+                .connections
+                .iter()
+                .map(|connection| {
+                    let vpn_name = connection.name.clone();
+                    CheckmarkItem {
+                        label: connection.name.clone(),
+                        checked: connection.on,
+                        activate: Box::new(move |this: &mut Self| {
+                            this.app
+                                .send_action_blocking(Action::ToggleVPN(vpn_name.clone()));
+                        }),
+                        ..Default::default()
+                    }
+                    .into()
+                })
+                .collect::<Vec<MenuItem<Self>>>();
             menu.push(
                 SubMenu {
                     label: "VPN".into(),
-                    submenu: vec![
-                        CheckmarkItem {
-                            label: "On".into(),
-                            checked: vpn_state.on,
-                            activate: Box::new(|this: &mut Self| {
-                                if let Some(app) = this.app.as_ref() {
-                                    app.send_action_blocking(Action::ToggleVPN);
-                                }
-                            }),
-                            ..Default::default()
-                        }
-                        .into(),
-                        StandardItem {
-                            label: vpn_state.active_connection.clone(),
-                            ..Default::default()
-                        }
-                        .into(),
-                    ],
+                    submenu: connections,
                     ..Default::default()
                 }
                 .into(),
