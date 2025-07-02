@@ -169,13 +169,11 @@ impl TrayManager {
         if let Some(state) = state {
             if state.on {
                 self.create_airplane_mode_tray().await;
-            } else {
-                self.airplane_mode_tray_handle.as_mut().unwrap().shutdown();
-                self.airplane_mode_tray_handle = None;
+                return;
             }
         }
 
-        if self.airplane_mode_tray_handle.is_none() {
+        if self.airplane_mode_tray_handle.is_some() {
             self.airplane_mode_tray_handle.as_mut().unwrap().shutdown();
             self.airplane_mode_tray_handle = None;
         }
