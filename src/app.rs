@@ -212,13 +212,14 @@ impl App {
                     .await;
                 return ControlFlow::Continue(());
             }
-            NmConnectivityState::Portal => {
-                todo!("handle portal");
-            }
             NmConnectivityState::Loss => {
                 tray_manager.update(TrayUpdate::Icon(Icon::Limited)).await;
             }
-            _ => {}
+            NmConnectivityState::Full => {}
+            _ => {
+                tray_manager.update(TrayUpdate::Icon(Icon::Unknown)).await;
+                return ControlFlow::Continue(());
+            }
         }
 
         if matches!(connectivity, NmConnectivityState::Full) {
