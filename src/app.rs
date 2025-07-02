@@ -205,7 +205,6 @@ impl App {
         match connectivity {
             NmConnectivityState::Unknown => {
                 tray_manager.update(TrayUpdate::Icon(Icon::Unknown)).await;
-                return ControlFlow::Continue(());
             }
             NmConnectivityState::None => {
                 tray_manager
@@ -218,66 +217,68 @@ impl App {
             }
             NmConnectivityState::Loss => {
                 tray_manager.update(TrayUpdate::Icon(Icon::Limited)).await;
-                return ControlFlow::Continue(());
             }
             _ => {}
         }
 
-        let primary_connection = match self.network_manager.primary_connection().await {
-            Ok(primary_connection) => primary_connection,
-            Err(e) => {
-                error!("Failed to get primary connection: {}", e);
-                return ControlFlow::Break(());
-            }
-        };
-
-        info!("Primary connection: {:?}", primary_connection.id().await);
-
-        let devices = match primary_connection.devices().await {
-            Ok(devices) => devices,
-            Err(e) => {
-                error!("Failed to get devices: {}", e);
-                return ControlFlow::Break(());
-            }
-        };
-
-        for device in devices {
-            let device_type = match device.device_type().await {
-                Ok(device_type) => device_type,
+        if matches!(connectivity, NmConnectivityState::Full) {
+            let primary_connection = match self.network_manager.primary_connection().await {
+                Ok(primary_connection) => primary_connection,
                 Err(e) => {
-                    warn!("Failed to get device type: {}", e);
-                    continue;
+                    error!("Failed to get primary connection: {}", e);
+                    return ControlFlow::Break(());
                 }
             };
 
-            match device_type {
-                DeviceType::Wifi => {
-                    let wireless_device = match device.to_specific_device().await {
-                        Some(SpecificDevice::Wireless(device)) => device,
-                        _ => return ControlFlow::Break(()),
-                    };
+            info!("Primary connection: {:?}", primary_connection.id().await);
 
-                    let active_access_point = wireless_device.active_access_point().await.unwrap();
+            let devices = match primary_connection.devices().await {
+                Ok(devices) => devices,
+                Err(e) => {
+                    error!("Failed to get devices: {}", e);
+                    return ControlFlow::Break(());
+                }
+            };
 
-                    let strength = active_access_point.strength().await.unwrap();
+            for device in devices {
+                let device_type = match device.device_type().await {
+                    Ok(device_type) => device_type,
+                    Err(e) => {
+                        warn!("Failed to get device type: {}", e);
+                        continue;
+                    }
+                };
 
-                    tray_manager
-                        .update(TrayUpdate::Icon(Icon::Wifi(strength)))
-                        .await;
+                match device_type {
+                    DeviceType::Wifi => {
+                        let wireless_device = match device.to_specific_device().await {
+                            Some(SpecificDevice::Wireless(device)) => device,
+                            _ => return ControlFlow::Break(()),
+                        };
+
+                        let active_access_point =
+                            wireless_device.active_access_point().await.unwrap();
+
+                        let strength = active_access_point.strength().await.unwrap();
+
+                        tray_manager
+                            .update(TrayUpdate::Icon(Icon::Wifi(strength)))
+                            .await;
+                    }
+                    DeviceType::Ethernet => {
+                        tray_manager.update(TrayUpdate::Icon(Icon::Ethernet)).await;
+                    }
+                    DeviceType::TunTap => {
+                        tray_manager.update(TrayUpdate::Icon(Icon::Tun)).await;
+                    }
+                    DeviceType::Bluetooth => {
+                        todo!("support bluetooth in future");
+                    }
+                    DeviceType::Modem => {
+                        todo!("support modem in future");
+                    }
+                    _ => {}
                 }
-                DeviceType::Ethernet => {
-                    tray_manager.update(TrayUpdate::Icon(Icon::Ethernet)).await;
-                }
-                DeviceType::TunTap => {
-                    tray_manager.update(TrayUpdate::Icon(Icon::Tun)).await;
-                }
-                DeviceType::Bluetooth => {
-                    todo!("support bluetooth in future");
-                }
-                DeviceType::Modem => {
-                    todo!("support modem in future");
-                }
-                _ => {}
             }
         }
 
