@@ -272,13 +272,9 @@ impl App {
                     DeviceType::TunTap => {
                         tray_manager.update(TrayUpdate::Icon(Icon::Tun)).await;
                     }
-                    DeviceType::Bluetooth => {
-                        todo!("support bluetooth in future");
+                    _ => {
+                        tray_manager.update(TrayUpdate::Icon(Icon::Unknown)).await;
                     }
-                    DeviceType::Modem => {
-                        todo!("support modem in future");
-                    }
-                    _ => {}
                 }
             }
         }
