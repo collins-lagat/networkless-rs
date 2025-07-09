@@ -45,7 +45,8 @@ impl Tray for AirplaneModeTray {
                 label: "On".into(),
                 checked: true,
                 activate: Box::new(|this: &mut Self| {
-                    this.app.send_action_blocking(Action::ToggleAirplaneMode);
+                    this.app
+                        .send_action_blocking(Action::ToggleAirplaneMode(false));
                 }),
                 ..Default::default()
             }

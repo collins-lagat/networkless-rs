@@ -25,9 +25,9 @@ pub enum Event {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     ChangeAccessPoint(String),
-    ToggleWifi,
-    ToggleWired,
-    ToggleAirplaneMode,
+    ToggleWifi(bool),
+    ToggleWired(bool),
+    ToggleAirplaneMode(bool),
     ToggleVPN(String),
 }
 

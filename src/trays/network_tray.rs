@@ -193,12 +193,14 @@ impl ksni::Tray for NetworkTray {
                 _ => "Available Networks",
             };
 
+            let wifi_on_state = wifi_state.on;
             let mut submenu = vec![
                 CheckmarkItem {
                     label: "On".into(),
                     checked: wifi_state.on,
-                    activate: Box::new(|this: &mut Self| {
-                        this.app.send_action_blocking(Action::ToggleWifi);
+                    activate: Box::new(move |this: &mut Self| {
+                        this.app
+                            .send_action_blocking(Action::ToggleWifi(!wifi_on_state));
                     }),
                     ..Default::default()
                 }
@@ -253,12 +255,14 @@ impl ksni::Tray for NetworkTray {
         }
 
         if let Some(wired_state) = &self.wired_state {
+            let wired_on_state = wired_state.on;
             menu.push(
                 CheckmarkItem {
                     label: "Wired".into(),
                     checked: wired_state.on,
-                    activate: Box::new(|this: &mut Self| {
-                        this.app.send_action_blocking(Action::ToggleWired);
+                    activate: Box::new(move |this: &mut Self| {
+                        this.app
+                            .send_action_blocking(Action::ToggleWired(!wired_on_state));
                     }),
                     ..Default::default()
                 }
@@ -267,12 +271,15 @@ impl ksni::Tray for NetworkTray {
         }
 
         if let Some(airplane_mode_state) = &self.airplane_mode_state {
+            let airplane_mode_on_state = airplane_mode_state.on;
             menu.push(
                 CheckmarkItem {
                     label: "Airplane Mode".into(),
                     checked: airplane_mode_state.on,
-                    activate: Box::new(|this: &mut Self| {
-                        this.app.send_action_blocking(Action::ToggleAirplaneMode);
+                    activate: Box::new(move |this: &mut Self| {
+                        this.app.send_action_blocking(Action::ToggleAirplaneMode(
+                            !airplane_mode_on_state,
+                        ));
                     }),
                     ..Default::default()
                 }
