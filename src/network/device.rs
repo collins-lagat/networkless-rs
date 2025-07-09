@@ -1,4 +1,7 @@
-use zbus::Result;
+use zbus::{
+    Connection, Result,
+    zvariant::{ObjectPath, OwnedObjectPath},
+};
 
 use crate::interfaces::{
     active::ActiveProxy, device::DeviceProxy, devices::wireless::WirelessProxy,
@@ -8,7 +11,7 @@ use crate::interfaces::{
 use super::{
     active_connection::ActiveConnection,
     devices::{SpecificDevice, Wireless},
-    enums::DeviceType,
+    enums::{DeviceState, DeviceType},
     settings::ConnectionSetting,
 };
 
@@ -22,12 +25,20 @@ impl Device {
         Self { device }
     }
 
-    // pub async fn state(&self) -> Result<DeviceState> {
-    //     self.device.state().await.map(DeviceState::from)
-    // }
+    pub async fn state(&self) -> Result<DeviceState> {
+        self.device.state().await.map(DeviceState::from)
+    }
 
     pub async fn device_type(&self) -> Result<DeviceType> {
         self.device.device_type().await.map(DeviceType::from)
+    }
+
+    pub async fn disconnect(&self) -> Result<()> {
+        self.device.disconnect().await
+    }
+
+    pub fn path(&self) -> ObjectPath<'static> {
+        self.device.inner().path().clone()
     }
 
     pub async fn active_connection(&self) -> Result<ActiveConnection> {
@@ -117,5 +128,15 @@ impl Device {
             }
             _ => None,
         }
+    }
+
+    pub async fn from_connection_and_path(connection: &Connection, path: OwnedObjectPath) -> Self {
+        let device = DeviceProxy::builder(connection)
+            .path(path)
+            .unwrap()
+            .build()
+            .await
+            .unwrap();
+        Self::new(device)
     }
 }

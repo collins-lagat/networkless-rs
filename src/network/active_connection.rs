@@ -1,14 +1,17 @@
 use anyhow::Result as AnyResult;
 use futures::StreamExt;
 use log::info;
-use zbus::Result;
+use zbus::{
+    Result,
+    zvariant::{ObjectPath, OwnedObjectPath},
+};
 
 use crate::{
     interfaces::{active::ActiveProxy, device::DeviceProxy},
     network::enums::ActiveConnectionState,
 };
 
-use super::device::Device;
+use super::{device::Device, enums::DeviceType};
 
 #[derive(Debug, Clone)]
 pub struct ActiveConnection {
@@ -31,9 +34,31 @@ impl ActiveConnection {
             .map(ActiveConnectionState::from)
     }
 
-    // pub async fn device_type(&self) -> Result<DeviceType> {
-    //     self.active_connection.type_().await.map(DeviceType::from)
-    // }
+    pub async fn device_type(&self) -> Result<DeviceType> {
+        self.active_connection.type_().await.map(DeviceType::from)
+    }
+
+    pub async fn connection(&self) -> Result<OwnedObjectPath> {
+        self.active_connection.connection().await
+    }
+
+    pub fn path(&self) -> ObjectPath<'static> {
+        self.active_connection.inner().path().clone()
+    }
+
+    pub async fn with<'a, F, Fut, R>(&'a self, f: F) -> Option<R>
+    where
+        F: FnOnce(OwnedObjectPath, OwnedObjectPath, Vec<OwnedObjectPath>) -> Fut,
+        Fut: Future<Output = R> + 'a,
+    {
+        let connection = self.active_connection.connection().await.unwrap();
+        let specific_object = self.active_connection.specific_object().await.unwrap();
+
+        let devices = self.active_connection.devices().await.unwrap();
+
+        let r = f(connection, specific_object, devices).await;
+        Some(r)
+    }
 
     pub async fn devices(&self) -> Result<Vec<Device>> {
         let devices = self.active_connection.devices().await?;

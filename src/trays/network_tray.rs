@@ -255,14 +255,12 @@ impl ksni::Tray for NetworkTray {
         }
 
         if let Some(wired_state) = &self.wired_state {
-            let wired_on_state = wired_state.on;
             menu.push(
                 CheckmarkItem {
                     label: "Wired".into(),
                     checked: wired_state.on,
                     activate: Box::new(move |this: &mut Self| {
-                        this.app
-                            .send_action_blocking(Action::ToggleWired(!wired_on_state));
+                        this.app.send_action_blocking(Action::ToggleWired);
                     }),
                     ..Default::default()
                 }

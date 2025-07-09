@@ -2,11 +2,12 @@ use std::ops::ControlFlow;
 
 use log::{error, info, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
+use zbus::zvariant::{ObjectPath, OwnedObjectPath};
 
 use crate::{
     network::{
         devices::SpecificDevice,
-        enums::{ActiveConnectionState, DeviceType, NmConnectivityState, NmState},
+        enums::{ActiveConnectionState, DeviceState, DeviceType, NmConnectivityState, NmState},
         network_manager::NetworkManager,
     },
     trays::{
@@ -26,7 +27,7 @@ pub enum Event {
 pub enum Action {
     ChangeAccessPoint(String),
     ToggleWifi(bool),
-    ToggleWired(bool),
+    ToggleWired,
     ToggleAirplaneMode(bool),
     ToggleVPN(String),
 }
@@ -60,9 +61,88 @@ impl App {
 
         let app = self.clone();
         handle.spawn(async move {
-            app.action_tx.send(action).await.unwrap();
+            if let Err(e) = app.action_tx.send(action).await {
+                error!("Failed to send action: {}", e);
+            }
         });
     }
+
+    pub async fn toggle_wifi(&self, on: bool) {
+        match self.network_manager.set_wifi_enabled(on).await {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Failed to set wifi enabled: {}", e);
+            }
+        }
+    }
+
+    pub async fn toggle_wired(&self) {
+        let devices = self.network_manager.devices().await.unwrap();
+
+        for device in devices {
+            if device.device_type().await.unwrap() != DeviceType::Ethernet {
+                continue;
+            }
+
+            let on = matches!(device.state().await.unwrap(), DeviceState::Activated);
+
+            if on {
+                let nm = self.network_manager.clone();
+                let active_connection = device.active_connection().await.unwrap();
+                let connection_path = OwnedObjectPath::from(active_connection.path());
+
+                info!("Deactivating Ethernet device: {:?}", connection_path);
+
+                match nm.deactivate_connection(connection_path).await {
+                    Ok(_) => {
+                        info!("Deactivated Ethernet device");
+                    }
+                    Err(e) => {
+                        error!("Failed to deactivate Ethernet device: {}", e);
+                    }
+                };
+            } else {
+                let available_connections = device.available_connections().await.unwrap();
+
+                if available_connections.is_empty() {
+                    continue;
+                }
+
+                let device_path = device.path();
+                let activation_result = self
+                    .network_manager
+                    .activate_connection(
+                        OwnedObjectPath::from(ObjectPath::from_string_unchecked("/".into())),
+                        OwnedObjectPath::from(device_path),
+                        OwnedObjectPath::from(ObjectPath::from_string_unchecked("/".into())),
+                    )
+                    .await;
+
+                match activation_result {
+                    Ok(_) => {
+                        info!("Activated Ethernet device");
+                    }
+                    Err(e) => {
+                        error!("Failed to activate Ethernet device: {}", e);
+                    }
+                }
+            }
+        }
+    }
+
+    pub async fn toggle_airplane_mode(&self, on: bool) {}
+
+    pub async fn toggle_vpn(&self, vpn: String) {
+        let connections = self.network_manager.active_connections().await.unwrap();
+        for connection in connections {
+            if connection.device_type().await.unwrap() != DeviceType::WireGuard {
+                continue;
+            }
+            //do stuff
+        }
+    }
+
+    pub async fn change_access_point(&self, access_point: String) {}
 
     pub async fn run(
         &self,
@@ -111,10 +191,29 @@ impl App {
                 .unwrap();
         });
 
+        let app = self.clone();
         tokio::spawn(async move {
-            while let Some(event) = action_rx.recv().await {
-                println!("Action: {:?}", event);
+            while let Some(action) = action_rx.recv().await {
+                match action {
+                    Action::ChangeAccessPoint(access_point) => {
+                        app.change_access_point(access_point).await;
+                    }
+                    Action::ToggleWifi(on) => {
+                        app.toggle_wifi(on).await;
+                    }
+                    Action::ToggleWired => {
+                        app.toggle_wired().await;
+                    }
+                    Action::ToggleAirplaneMode(on) => {
+                        app.toggle_airplane_mode(on).await;
+                    }
+                    Action::ToggleVPN(vpn) => {
+                        app.toggle_vpn(vpn).await;
+                    }
+                }
             }
+
+            warn!("Action channel closed");
         });
 
         while let Some(event) = event_rx.recv().await {
@@ -285,7 +384,7 @@ impl App {
             }
         }
 
-        let devices = match self.network_manager.devices().await {
+        let devices = match self.network_manager.all_devices().await {
             Ok(devices) => devices,
             Err(e) => {
                 error!("Failed to get devices: {}", e);
@@ -347,27 +446,19 @@ impl App {
                         })))
                         .await;
                 }
-                DeviceType::Ethernet => {
-                    let active_connection = match device.active_connection().await {
-                        Ok(active_connection) => active_connection,
-                        Err(e) => {
-                            error!("Failed to get active connection: {}", e);
-                            return ControlFlow::Break(());
-                        }
-                    };
-
-                    match active_connection.state().await {
-                        Ok(state) => {
-                            let on = matches!(state, ActiveConnectionState::Activated);
-                            tray_manager
-                                .update(TrayUpdate::Wired(Some(WiredState { on })))
-                                .await;
-                        }
-                        Err(e) => {
-                            warn!("Ethernet: Failed to get active connection state: {}", e);
-                        }
-                    };
-                }
+                DeviceType::Ethernet => match device.state().await.unwrap() {
+                    DeviceState::Activated => {
+                        tray_manager
+                            .update(TrayUpdate::Wired(Some(WiredState { on: true })))
+                            .await;
+                    }
+                    DeviceState::Disconnected => {
+                        tray_manager
+                            .update(TrayUpdate::Wired(Some(WiredState { on: false })))
+                            .await;
+                    }
+                    _ => {}
+                },
                 DeviceType::WireGuard => {
                     let wire_guard_connection = device.active_connection().await.unwrap();
                     let wire_guard_connection_id = wire_guard_connection.id().await.unwrap();

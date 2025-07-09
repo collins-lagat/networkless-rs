@@ -134,6 +134,24 @@ impl NetworkManager {
         Ok(out)
     }
 
+    pub async fn all_devices(&self) -> Result<Vec<Device>> {
+        let devices = self.nm.get_devices().await?;
+
+        let mut out = Vec::with_capacity(devices.len());
+
+        for device in devices {
+            // BUG: It's possible for device to be an ObjectPath("/") which means that the device
+            // is not set. This will cause panics when you try to acess properties
+            // and call methods on it. Until this is fixed, we need to check if the device
+            // doesn't throw an error on any of the methods.
+            // In the future, invalid devices will probably be filtered out from the list
+            let deice = Device::from_connection_and_path(&self.connection, device).await;
+            out.push(deice);
+        }
+
+        Ok(out)
+    }
+
     pub async fn state(&self) -> ZbusResult<NmState> {
         self.nm.state().await.map(NmState::from)
     }
@@ -158,6 +176,19 @@ impl NetworkManager {
         Ok(ActiveConnection::new(primary_connection))
     }
 
+    pub async fn active_connections(&self) -> Result<Vec<ActiveConnection>> {
+        let active_connections = self.nm.active_connections().await?;
+        let mut out = Vec::with_capacity(active_connections.len());
+        for active_connection in active_connections {
+            let active_connection = ActiveProxy::builder(&self.connection)
+                .path(active_connection)?
+                .build()
+                .await?;
+            out.push(ActiveConnection::new(active_connection));
+        }
+        Ok(out)
+    }
+
     // pub async fn primary_connection_type(&self) -> ZbusResult<DeviceType> {
     //     self.nm
     //         .primary_connection_type()
@@ -170,35 +201,35 @@ impl NetworkManager {
     //     let connectivity = NmConnectivityState::from(connectivity);
     //     Ok(connectivity)
     // }
-    //
-    // pub async fn activate_connection(
-    //     &self,
-    //     active_connection: zbus::zvariant::OwnedObjectPath,
-    //     device: zbus::zvariant::OwnedObjectPath,
-    //     specific_object: zbus::zvariant::OwnedObjectPath,
-    // ) -> Result<()> {
-    //     self.nm
-    //         .activate_connection(&active_connection, &device, &specific_object)
-    //         .await?;
-    //     Ok(())
-    // }
-    //
-    // pub async fn deactivate_connection(
-    //     &self,
-    //     active_connection: &zbus::zvariant::OwnedObjectPath,
-    // ) -> Result<()> {
-    //     self.nm.deactivate_connection(active_connection).await?;
-    //     Ok(())
-    // }
+
+    pub async fn activate_connection(
+        &self,
+        active_connection: zbus::zvariant::OwnedObjectPath,
+        device: zbus::zvariant::OwnedObjectPath,
+        specific_object: zbus::zvariant::OwnedObjectPath,
+    ) -> Result<()> {
+        self.nm
+            .activate_connection(&active_connection, &device, &specific_object)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn deactivate_connection(
+        &self,
+        active_connection: zbus::zvariant::OwnedObjectPath,
+    ) -> Result<()> {
+        self.nm.deactivate_connection(&active_connection).await?;
+        Ok(())
+    }
 
     pub async fn wifi_enabled(&self) -> Result<bool> {
         Ok(self.nm.wireless_enabled().await?)
     }
 
-    // pub async fn set_wifi_enabled(&self, enabled: bool) -> Result<()> {
-    //     self.nm.set_wireless_enabled(enabled).await?;
-    //     Ok(())
-    // }
+    pub async fn set_wifi_enabled(&self, enabled: bool) -> Result<()> {
+        self.nm.set_wireless_enabled(enabled).await?;
+        Ok(())
+    }
 
     pub async fn bluetooth_enabled(&self) -> Result<bool> {
         let cmd = Command::new("rfkill")
@@ -225,5 +256,17 @@ impl NetworkManager {
         } else {
             Ok(false)
         }
+    }
+
+    pub async fn with_connection<'a, F, Fut, R>(&'a self, f: F) -> Option<R>
+    where
+        F: FnOnce(&'a Connection) -> Fut,
+        Fut: Future<Output = R> + 'a,
+    {
+        let connection = &self.connection;
+
+        let r = f(connection).await;
+
+        Some(r)
     }
 }
