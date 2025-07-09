@@ -56,7 +56,12 @@ impl App {
     }
 
     pub fn send_action_blocking(&self, action: Action) {
-        self.action_tx.blocking_send(action).unwrap();
+        let handle = tokio::runtime::Handle::current();
+
+        let app = self.clone();
+        handle.spawn(async move {
+            app.action_tx.send(action).await.unwrap();
+        });
     }
 
     pub async fn run(
