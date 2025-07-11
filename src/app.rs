@@ -456,46 +456,52 @@ impl App {
 
             match device_type {
                 DeviceType::Wifi => {
-                    let wireless_device = match device.to_specific_device().await {
-                        Some(SpecificDevice::Wireless(device)) => device,
-                        _ => return ControlFlow::Break(()),
-                    };
+                    let state = device.state().await.unwrap();
 
-                    let configured_connections = device.available_connections().await.unwrap();
-                    let futures = configured_connections
-                        .iter()
-                        .map(|setting| async { setting.id().await.unwrap() });
+                    match state {
+                        DeviceState::Activated => {
+                            let wireless_device = match device.to_specific_device().await {
+                                Some(SpecificDevice::Wireless(device)) => device,
+                                _ => return ControlFlow::Break(()),
+                            };
 
-                    let known_connections = futures::future::join_all(futures).await;
+                            let configured_connections =
+                                device.available_connections().await.unwrap();
+                            let futures = configured_connections
+                                .iter()
+                                .map(|setting| async { setting.id().await.unwrap() });
 
-                    let mut access_points = wireless_device.access_points().await.unwrap();
-                    let futures = access_points
-                        .iter_mut()
-                        .map(|ap| async { ap.id().await.unwrap().into() });
-                    let available_connections = futures::future::join_all(futures).await;
-                    // TODO: sort access points by:
-                    // 1. known connections
-                    // 2. strength
-                    // 3. name alphabetically
+                            let known_connections = futures::future::join_all(futures).await;
 
-                    let active_connection = device.active_connection().await.unwrap();
-                    let on = match active_connection.state().await {
-                        Ok(state) => {
-                            matches!(state, ActiveConnectionState::Activated)
+                            let mut access_points = wireless_device.access_points().await.unwrap();
+                            let futures = access_points
+                                .iter_mut()
+                                .map(|ap| async { ap.id().await.unwrap().into() });
+                            let available_connections = futures::future::join_all(futures).await;
+                            // TODO: sort access points by:
+                            // 1. known connections
+                            // 2. strength
+                            // 3. name alphabetically
+
+                            tray_manager
+                                .update(TrayUpdate::Wireless(Some(WifiState {
+                                    on: true,
+                                    known_connections,
+                                    available_connections,
+                                })))
+                                .await;
                         }
-                        Err(e) => {
-                            warn!("WiFi: Failed to get active connection state: {}", e);
-                            false
+                        DeviceState::Disconnected | DeviceState::Unavailable => {
+                            tray_manager
+                                .update(TrayUpdate::Wireless(Some(WifiState {
+                                    on: false,
+                                    known_connections: vec![],
+                                    available_connections: vec![],
+                                })))
+                                .await;
                         }
-                    };
-
-                    tray_manager
-                        .update(TrayUpdate::Wireless(Some(WifiState {
-                            on,
-                            known_connections,
-                            available_connections,
-                        })))
-                        .await;
+                        _ => {}
+                    }
                 }
                 DeviceType::Ethernet => match device.state().await.unwrap() {
                     DeviceState::Activated => {
