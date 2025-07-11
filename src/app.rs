@@ -509,7 +509,7 @@ impl App {
                             .update(TrayUpdate::Wired(Some(WiredState { on: true })))
                             .await;
                     }
-                    DeviceState::Disconnected => {
+                    DeviceState::Disconnected | DeviceState::Unavailable => {
                         tray_manager
                             .update(TrayUpdate::Wired(Some(WiredState { on: false })))
                             .await;
@@ -535,7 +535,7 @@ impl App {
                             };
                             vpn_connections.push(vpn_connection);
                         }
-                        DeviceState::Disconnected => {
+                        DeviceState::Disconnected | DeviceState::Unavailable => {
                             let vpn_connection = VPNConnection {
                                 name: wire_guard_connection_id.clone(),
                                 on: false,
