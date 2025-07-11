@@ -156,12 +156,40 @@ impl App {
     }
 
     pub async fn toggle_vpn(&self, vpn: String) {
-        let connections = self.network_manager.active_connections().await.unwrap();
-        for connection in connections {
-            if connection.device_type().await.unwrap() != DeviceType::WireGuard {
+        let active_connections = self.network_manager.active_connections().await.unwrap();
+        for active_connection in active_connections {
+            if active_connection.device_type().await.unwrap() != DeviceType::WireGuard {
                 continue;
             }
-            //do stuff
+
+            let vpn_name = active_connection.id().await.unwrap();
+
+            if vpn_name != vpn {
+                continue;
+            }
+
+            let on = matches!(
+                active_connection.state().await.unwrap(),
+                ActiveConnectionState::Activated
+            );
+
+            if on {
+                let active_connection_path = OwnedObjectPath::from(active_connection.path());
+                self.network_manager
+                    .deactivate_connection(active_connection_path)
+                    .await
+                    .unwrap();
+            } else {
+                let specific_object_path = active_connection.specific_object().await.unwrap();
+                self.network_manager
+                    .activate_connection(
+                        OwnedObjectPath::from(ObjectPath::from_string_unchecked("/".into())),
+                        OwnedObjectPath::from(ObjectPath::from_string_unchecked("/".into())),
+                        specific_object_path,
+                    )
+                    .await
+                    .unwrap();
+            }
         }
     }
 
@@ -485,21 +513,31 @@ impl App {
                 DeviceType::WireGuard => {
                     let wire_guard_connection = device.active_connection().await.unwrap();
                     let wire_guard_connection_id = wire_guard_connection.id().await.unwrap();
+                    let state = match device.state().await {
+                        Ok(state) => state,
+                        Err(e) => {
+                            error!("Failed to get device state: {}", e);
+                            return ControlFlow::Break(());
+                        }
+                    };
 
-                    let active_connection = device.active_connection().await.unwrap();
-
-                    match active_connection.state().await {
-                        Ok(state) => {
-                            let on = matches!(state, ActiveConnectionState::Activated);
+                    match state {
+                        DeviceState::Activated => {
                             let vpn_connection = VPNConnection {
                                 name: wire_guard_connection_id.clone(),
-                                on,
+                                on: true,
                             };
                             vpn_connections.push(vpn_connection);
                         }
-                        Err(e) => {
-                            warn!("WireGuard: Failed to get active connection state: {}", e);
+                        DeviceState::Disconnected => {
+                            let vpn_connection = VPNConnection {
+                                name: wire_guard_connection_id.clone(),
+                                on: false,
+                            };
+
+                            vpn_connections.push(vpn_connection);
                         }
+                        _ => {}
                     }
                 }
                 _ => {}
