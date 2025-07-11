@@ -195,12 +195,17 @@ impl NetworkManager {
     //         .await
     //         .map(DeviceType::from)
     // }
-    //
-    // pub async fn check_connectivity(&self) -> Result<NmConnectivityState> {
-    //     let connectivity = self.nm.check_connectivity().await?;
-    //     let connectivity = NmConnectivityState::from(connectivity);
-    //     Ok(connectivity)
-    // }
+
+    pub async fn check_connectivity(&self) -> Result<NmConnectivityState> {
+        let connectivity = self.nm.check_connectivity().await?;
+        let connectivity = NmConnectivityState::from(connectivity);
+        Ok(connectivity)
+    }
+
+    pub async fn reload(&self) -> Result<()> {
+        self.nm.reload(0).await?;
+        Ok(())
+    }
 
     pub async fn activate_connection(
         &self,

@@ -27,9 +27,9 @@ pub enum Event {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
     ChangeAccessPoint(String),
-    ToggleWifi(bool),
+    ToggleWifi,
     ToggleWired,
-    ToggleAirplaneMode(bool),
+    ToggleAirplaneMode,
     ToggleVPN(String),
 }
 
@@ -68,8 +68,10 @@ impl App {
         });
     }
 
-    pub async fn toggle_wifi(&self, on: bool) {
-        match self.network_manager.set_wifi_enabled(on).await {
+    pub async fn toggle_wifi(&self) {
+        let on = self.network_manager.wifi_enabled().await.unwrap();
+
+        match self.network_manager.set_wifi_enabled(!on).await {
             Ok(_) => {}
             Err(e) => {
                 error!("Failed to set wifi enabled: {}", e);
@@ -142,7 +144,7 @@ impl App {
         }
     }
 
-    pub async fn toggle_airplane_mode(&self, on: bool) {}
+    pub async fn toggle_airplane_mode(&self) {}
 
     pub async fn toggle_vpn(&self, vpn: String) {
         let connections = self.network_manager.active_connections().await.unwrap();
@@ -210,14 +212,14 @@ impl App {
                     Action::ChangeAccessPoint(access_point) => {
                         app.change_access_point(access_point).await;
                     }
-                    Action::ToggleWifi(on) => {
-                        app.toggle_wifi(on).await;
+                    Action::ToggleWifi => {
+                        app.toggle_wifi().await;
                     }
                     Action::ToggleWired => {
                         app.toggle_wired().await;
                     }
-                    Action::ToggleAirplaneMode(on) => {
-                        app.toggle_airplane_mode(on).await;
+                    Action::ToggleAirplaneMode => {
+                        app.toggle_airplane_mode().await;
                     }
                     Action::ToggleVPN(vpn) => {
                         app.toggle_vpn(vpn).await;

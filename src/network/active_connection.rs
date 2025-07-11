@@ -1,6 +1,6 @@
 use anyhow::Result as AnyResult;
 use futures::StreamExt;
-use log::info;
+use log::{error, info};
 use zbus::{
     Result,
     zvariant::{ObjectPath, OwnedObjectPath},
@@ -44,6 +44,18 @@ impl ActiveConnection {
 
     pub fn path(&self) -> ObjectPath<'static> {
         self.active_connection.inner().path().clone()
+    }
+
+    pub async fn specific_object(&self) -> Result<OwnedObjectPath> {
+        let specific_object = match self.active_connection.specific_object().await {
+            Ok(specific_object) => specific_object,
+            Err(e) => {
+                error!("Failed to get SpecificObject: {}", e);
+                return Err(e);
+            }
+        };
+
+        Ok(specific_object)
     }
 
     pub async fn with<'a, F, Fut, R>(&'a self, f: F) -> Option<R>
