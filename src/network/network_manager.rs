@@ -1,6 +1,7 @@
 use anyhow::Result;
 use anyhow::bail;
 use futures::StreamExt;
+use log::error;
 use log::info;
 use tokio::process::Command;
 use zbus::Connection;
@@ -273,5 +274,26 @@ impl NetworkManager {
         let r = f(connection).await;
 
         Some(r)
+    }
+
+    pub async fn set_airplane_mode_enabled(&self, on: bool) -> Result<()> {
+        let cmd = Command::new("rfkill")
+            .arg(if on { "unblock" } else { "block" })
+            .arg("bluetooth")
+            .output()
+            .await?;
+
+        if !cmd.status.success() {
+            anyhow::bail!("Failed to set bluetooth enabled");
+        }
+
+        match self.set_wifi_enabled(on).await {
+            Ok(_) => {}
+            Err(e) => {
+                anyhow::bail!("Failed to set wifi enabled: {}", e);
+            }
+        };
+
+        Ok(())
     }
 }

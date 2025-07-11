@@ -144,7 +144,16 @@ impl App {
         }
     }
 
-    pub async fn toggle_airplane_mode(&self) {}
+    pub async fn toggle_airplane_mode(&self) {
+        let on = self.network_manager.airplane_mode_enabled().await.unwrap();
+
+        match self.network_manager.set_airplane_mode_enabled(!on).await {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Failed to set airplane mode: {}", e);
+            }
+        }
+    }
 
     pub async fn toggle_vpn(&self, vpn: String) {
         let connections = self.network_manager.active_connections().await.unwrap();
