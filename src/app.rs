@@ -6,6 +6,7 @@ use zbus::zvariant::{ObjectPath, OwnedObjectPath};
 
 use crate::{
     network::{
+        device::Device,
         devices::SpecificDevice,
         enums::{ActiveConnectionState, DeviceState, DeviceType, NmConnectivityState, NmState},
         network_manager::NetworkManager,
@@ -87,46 +88,57 @@ impl App {
             let on = matches!(device.state().await.unwrap(), DeviceState::Activated);
 
             if on {
-                let nm = self.network_manager.clone();
-                let active_connection = device.active_connection().await.unwrap();
-                let connection_path = OwnedObjectPath::from(active_connection.path());
-
-                info!("Deactivating Ethernet device: {:?}", connection_path);
-
-                match nm.deactivate_connection(connection_path).await {
-                    Ok(_) => {
-                        info!("Deactivated Ethernet device");
-                    }
-                    Err(e) => {
-                        error!("Failed to deactivate Ethernet device: {}", e);
-                    }
-                };
+                self.deactivate_wired_connection(&device).await;
             } else {
-                let available_connections = device.available_connections().await.unwrap();
-
-                if available_connections.is_empty() {
-                    continue;
-                }
-
-                let device_path = device.path();
-                let activation_result = self
-                    .network_manager
-                    .activate_connection(
-                        OwnedObjectPath::from(ObjectPath::from_string_unchecked("/".into())),
-                        OwnedObjectPath::from(device_path),
-                        OwnedObjectPath::from(ObjectPath::from_string_unchecked("/".into())),
-                    )
-                    .await;
-
-                match activation_result {
-                    Ok(_) => {
-                        info!("Activated Ethernet device");
-                    }
-                    Err(e) => {
-                        error!("Failed to activate Ethernet device: {}", e);
-                    }
-                }
+                self.activate_wired_connection(device).await;
             }
+        }
+    }
+
+    async fn deactivate_wired_connection(&self, device: &Device) {
+        let active_connection = device.active_connection().await.unwrap();
+        let connection_path = OwnedObjectPath::from(active_connection.path());
+
+        match self
+            .network_manager
+            .deactivate_connection(connection_path)
+            .await
+        {
+            Ok(_) => {
+                info!("Deactivated Ethernet device");
+            }
+            Err(e) => {
+                error!("Failed to deactivate Ethernet device: {}", e);
+            }
+        };
+    }
+
+    async fn activate_wired_connection(&self, device: Device) {
+        let available_connections = device.available_connections().await.unwrap();
+        if available_connections.is_empty() {
+            return;
+        }
+
+        for connection in available_connections {
+            let device_path = device.path();
+            let connection_path = OwnedObjectPath::from(connection.path());
+            let activation_result = self
+                .network_manager
+                .activate_connection(
+                    connection_path,
+                    OwnedObjectPath::from(device_path.clone()),
+                    OwnedObjectPath::from(ObjectPath::from_string_unchecked("/".into())),
+                )
+                .await;
+
+            match activation_result {
+                Ok(_) => {
+                    info!("Activated Ethernet device: {}", device_path);
+                }
+                Err(e) => {
+                    error!("Failed to activate Ethernet device: {}", e);
+                }
+            };
         }
     }
 

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use zbus::zvariant::ObjectPath;
 
 use crate::interfaces::settings::connection::ConnectionProxy;
 
@@ -32,4 +33,8 @@ impl ConnectionSetting {
     //         anyhow::bail!("No uuid found")
     //     }
     // }
+
+    pub fn path(&self) -> ObjectPath<'static> {
+        self.settings.inner().path().clone()
+    }
 }
