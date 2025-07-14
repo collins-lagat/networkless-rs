@@ -524,11 +524,12 @@ impl App {
                             .update(TrayUpdate::Wired(Some(WiredState { on: true })))
                             .await;
                     }
-                    DeviceState::Disconnected | DeviceState::Unavailable => {
+                    DeviceState::Disconnected => {
                         tray_manager
                             .update(TrayUpdate::Wired(Some(WiredState { on: false })))
                             .await;
                     }
+
                     _ => {}
                 },
                 DeviceType::WireGuard => {
