@@ -193,7 +193,9 @@ impl App {
         }
     }
 
-    pub async fn change_access_point(&self, access_point: String) {}
+    pub async fn change_access_point(&self, access_point: String) {
+        info!("Changing access point to {}", access_point);
+    }
 
     pub async fn run(
         &self,
@@ -232,7 +234,7 @@ impl App {
         });
 
         let app = self.clone();
-        tokio::spawn(async move {
+        let mut primary_connection_handle = tokio::spawn(async move {
             let primary_connection = app.network_manager.primary_connection().await.unwrap();
             primary_connection
                 .listening_to_state_changes(async |_| {
@@ -268,6 +270,7 @@ impl App {
         });
 
         while let Some(event) = event_rx.recv().await {
+            let app = self.clone();
             match event {
                 Event::Init => {
                     if let ControlFlow::Break(_) = self.update(&mut tray_manager).await {
@@ -277,6 +280,18 @@ impl App {
                     continue;
                 }
                 Event::Update => {
+                    primary_connection_handle.abort();
+                    primary_connection_handle = tokio::spawn(async move {
+                        let primary_connection =
+                            app.network_manager.primary_connection().await.unwrap();
+                        primary_connection
+                            .listening_to_state_changes(async |_| {
+                                app.send_event(Event::Update).await;
+                            })
+                            .await
+                            .unwrap();
+                    });
+
                     if let ControlFlow::Break(_) = self.update(&mut tray_manager).await {
                         break;
                     }
