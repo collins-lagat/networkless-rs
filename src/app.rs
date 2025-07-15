@@ -152,7 +152,9 @@ impl App {
             Err(e) => {
                 error!("Failed to set airplane mode: {}", e);
             }
-        }
+        };
+
+        self.send_event(Event::Update).await;
     }
 
     pub async fn toggle_vpn(&self, vpn: String) {
