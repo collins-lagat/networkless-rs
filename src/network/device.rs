@@ -4,7 +4,9 @@ use zbus::{
 };
 
 use crate::interfaces::{
-    active::ActiveProxy, device::DeviceProxy, devices::wireless::WirelessProxy,
+    active::ActiveProxy,
+    device::{DeviceProxy, StateChangedStream},
+    devices::wireless::WirelessProxy,
     settings::connection::ConnectionProxy,
 };
 
@@ -23,6 +25,10 @@ pub struct Device {
 impl Device {
     pub fn new(device: DeviceProxy<'static>) -> Self {
         Self { device }
+    }
+
+    pub async fn receive_state_changed_signal(&self) -> Result<StateChangedStream> {
+        self.device.receive_state_changed_signal().await
     }
 
     pub async fn state(&self) -> Result<DeviceState> {

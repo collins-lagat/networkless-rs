@@ -1,5 +1,6 @@
-use std::ops::ControlFlow;
+use std::{ops::ControlFlow, time::Duration};
 
+use futures::StreamExt;
 use log::{error, info, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
 use zbus::zvariant::{ObjectPath, OwnedObjectPath};
@@ -508,7 +509,61 @@ impl App {
                                 })))
                                 .await;
                         }
-                        DeviceState::Disconnected | DeviceState::Unavailable => {
+                        DeviceState::Disconnected => {
+                            let on = self.network_manager.wifi_enabled().await.unwrap();
+                            tray_manager
+                                .update(TrayUpdate::Wireless(Some(WifiState {
+                                    on,
+                                    known_connections: vec![],
+                                    available_connections: vec![],
+                                })))
+                                .await;
+
+                            if on {
+                                info!("Waiting for wireless device to activate...");
+                                let mut state_change_signal =
+                                    device.receive_state_changed_signal().await.unwrap();
+
+                                let mut attempts = 0;
+                                let max_attempts = 20;
+
+                                loop {
+                                    attempts += 1;
+
+                                    if attempts > max_attempts {
+                                        break;
+                                    }
+
+                                    info!("Attempt {}/{}", attempts, max_attempts);
+
+                                    if let Ok(Some(state_changed)) = tokio::time::timeout(
+                                        Duration::from_secs(20),
+                                        state_change_signal.next(),
+                                    )
+                                    .await
+                                    {
+                                        let state = match state_changed.args() {
+                                            Ok(state) => DeviceState::from(state.new_state),
+                                            Err(_) => {
+                                                error!("Failed to get wireless device state");
+                                                break;
+                                            }
+                                        };
+
+                                        if matches!(state, DeviceState::Activated) {
+                                            info!("Wireless device activated!");
+                                            self.send_event(Event::Update).await;
+                                            break;
+                                        }
+
+                                        warn!("Wireless device not activated yet. Trying again...");
+                                    }
+                                }
+                            }
+                        }
+                        DeviceState::Unavailable => {
+                            // Often happens when the wifi is disabled or airplane mode is on
+                            info!("Wireless Device state: Unavailable");
                             tray_manager
                                 .update(TrayUpdate::Wireless(Some(WifiState {
                                     on: false,
