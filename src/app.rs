@@ -78,6 +78,8 @@ impl App {
                 error!("Failed to set wifi enabled: {}", e);
             }
         }
+
+        self.send_event(Event::Update).await;
     }
 
     pub async fn toggle_wired(&self) {
