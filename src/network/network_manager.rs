@@ -278,7 +278,7 @@ impl NetworkManager {
 
     pub async fn set_airplane_mode_enabled(&self, on: bool) -> Result<()> {
         let cmd = Command::new("rfkill")
-            .arg(if on { "unblock" } else { "block" })
+            .arg(if on { "block" } else { "unblock" })
             .arg("bluetooth")
             .output()
             .await?;
@@ -287,7 +287,7 @@ impl NetworkManager {
             anyhow::bail!("Failed to set bluetooth enabled");
         }
 
-        match self.set_wifi_enabled(on).await {
+        match self.set_wifi_enabled(!on).await {
             Ok(_) => {}
             Err(e) => {
                 anyhow::bail!("Failed to set wifi enabled: {}", e);
