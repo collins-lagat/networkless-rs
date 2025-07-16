@@ -214,9 +214,8 @@ impl ksni::Tray for NetworkTray {
                     selected: 0,
                     options,
                     select: Box::new(|this: &mut Self, current| {
-                        let access_point = this.wifi_state.as_ref().unwrap().available_connections
-                            [current]
-                            .clone();
+                        let access_point =
+                            this.wifi_state.as_ref().unwrap().known_connections[current].clone();
                         this.app
                             .send_action_blocking(Action::ChangeAccessPoint(access_point));
                     }),
