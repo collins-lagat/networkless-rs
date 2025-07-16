@@ -13,8 +13,8 @@ use crate::{
         network_manager::NetworkManager,
     },
     trays::{
-        AirplaneModeState, Icon, TrayManager, TrayUpdate, VPNConnection, VPNState, WifiState,
-        WiredState,
+        AirplaneModeState, Icon, TrayManager, TrayUpdate, VPNConnection, VPNState, WifiConnection,
+        WifiState, WiredState,
     },
 };
 
@@ -27,7 +27,7 @@ pub enum Event {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Action {
-    ChangeAccessPoint(String),
+    ChangeAccessPoint(WifiConnection),
     ToggleWifi,
     ToggleWired,
     ToggleAirplaneMode,
@@ -198,8 +198,8 @@ impl App {
         }
     }
 
-    pub async fn change_access_point(&self, access_point: String) {
-        info!("Changing access point to {}", access_point);
+    pub async fn change_access_point(&self, access_point: WifiConnection) {
+        info!("Changing access point to {:?}", access_point);
     }
 
     pub async fn run(
@@ -390,6 +390,11 @@ impl App {
             }
             NmConnectivityState::Loss => {
                 tray_manager.update(TrayUpdate::Icon(Icon::Limited)).await;
+                let app = self.clone();
+                tokio::spawn(async move {
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    app.send_event(Event::Update).await;
+                });
             }
             NmConnectivityState::Full => {}
             _ => {
@@ -491,17 +496,42 @@ impl App {
                                 .iter()
                                 .map(|setting| async { setting.id().await.unwrap() });
 
-                            let known_connections = futures::future::join_all(futures).await;
+                            let ssids_of_known_connections =
+                                futures::future::join_all(futures).await;
 
                             let mut access_points = wireless_device.access_points().await.unwrap();
-                            let futures = access_points
-                                .iter_mut()
-                                .map(|ap| async { ap.id().await.unwrap().into() });
+                            let futures = access_points.iter_mut().map(|ap| async {
+                                WifiConnection {
+                                    ssid: ap.id().await.unwrap().into(),
+                                    hw_address: ap.hw_address().await.unwrap(),
+                                }
+                            });
                             let available_connections = futures::future::join_all(futures).await;
                             // TODO: sort access points by:
                             // 1. known connections
                             // 2. strength
                             // 3. name alphabetically
+
+                            let known_connections = ssids_of_known_connections
+                                .into_iter()
+                                .map(|ssid| {
+                                    match available_connections
+                                        .iter()
+                                        .find(|connection| connection.ssid == ssid)
+                                    {
+                                        Some(connection) => connection.clone(),
+                                        None => WifiConnection {
+                                            ssid,
+                                            hw_address: "".into(),
+                                        },
+                                    }
+                                })
+                                .collect::<Vec<WifiConnection>>();
+
+                            let known_connections = known_connections
+                                .into_iter()
+                                .filter(|connection| !connection.hw_address.is_empty())
+                                .collect::<Vec<WifiConnection>>();
 
                             tray_manager
                                 .update(TrayUpdate::Wireless(Some(WifiState {

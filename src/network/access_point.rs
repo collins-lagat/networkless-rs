@@ -26,6 +26,14 @@ impl AccessPoint {
         Ok(self.id.as_ref().unwrap())
     }
 
+    pub async fn ssid(&self) -> Result<Vec<u8>> {
+        self.access_point.ssid().await
+    }
+
+    pub async fn hw_address(&self) -> Result<String> {
+        self.access_point.hw_address().await
+    }
+
     pub async fn strength(&self) -> Result<u8> {
         self.access_point.strength().await
     }
