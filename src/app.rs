@@ -200,6 +200,16 @@ impl App {
 
     pub async fn change_access_point(&self, access_point: WifiConnection) {
         info!("Changing access point to {:?}", access_point);
+
+        // TODO: check if the access point is already known
+
+        // TODO: deactivate other wireless connections
+
+        // TODO: connect to the access point using NetworkManager
+        // activate_connection(conn, device, access_point_path);
+
+        // TODO: wait for the active connection state to change from
+        // whatever it is to Activated
     }
 
     pub async fn run(
