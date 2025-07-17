@@ -31,6 +31,7 @@ pub struct WifiConnection {
 #[derive(Debug, Clone)]
 pub struct WifiState {
     pub on: bool,
+    pub active_connection_index: usize,
     pub available_connections: Vec<WifiConnection>,
     pub known_connections: Vec<WifiConnection>,
 }
@@ -213,7 +214,7 @@ impl ksni::Tray for NetworkTray {
                 .into(),
                 MenuItem::Separator,
                 RadioGroup {
-                    selected: 0,
+                    selected: wifi_state.active_connection_index,
                     options,
                     select: Box::new(|this: &mut Self, current| {
                         let access_point =

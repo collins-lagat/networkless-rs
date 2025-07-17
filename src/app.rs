@@ -612,6 +612,7 @@ impl App {
                                     ssid: ap.id().await.unwrap().into(),
                                     hw_address: ap.hw_address().await.unwrap(),
                                     strength: ap.strength().await.unwrap(),
+                                    secure: ap.secure().await.unwrap(),
                                 }
                             });
                             let mut available_connections =
@@ -629,6 +630,7 @@ impl App {
                                             ssid: ssid.clone(),
                                             hw_address: "".into(),
                                             strength: 0,
+                                            secure: false,
                                         },
                                     }
                                 })
@@ -655,12 +657,27 @@ impl App {
                                     return is_stronger;
                                 }
 
+                                let is_secure = b.secure.cmp(&a.secure);
+
+                                if is_secure != Ordering::Equal {
+                                    return is_secure;
+                                }
+
                                 a.ssid.to_lowercase().cmp(&b.ssid.to_lowercase())
                             });
+
+                            let active_connnection = device.active_connection().await.unwrap();
+                            let active_connection_id = active_connnection.id().await.unwrap();
+
+                            let active_connection_index = known_connections
+                                .iter()
+                                .position(|connection| connection.ssid == active_connection_id)
+                                .unwrap_or_default();
 
                             tray_manager
                                 .update(TrayUpdate::Wireless(Some(WifiState {
                                     on: true,
+                                    active_connection_index,
                                     known_connections,
                                     available_connections,
                                 })))
@@ -671,6 +688,7 @@ impl App {
                             tray_manager
                                 .update(TrayUpdate::Wireless(Some(WifiState {
                                     on,
+                                    active_connection_index: 0,
                                     known_connections: vec![],
                                     available_connections: vec![],
                                 })))
@@ -724,6 +742,7 @@ impl App {
                             tray_manager
                                 .update(TrayUpdate::Wireless(Some(WifiState {
                                     on: false,
+                                    active_connection_index: 0,
                                     known_connections: vec![],
                                     available_connections: vec![],
                                 })))
