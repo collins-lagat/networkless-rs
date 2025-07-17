@@ -8,7 +8,10 @@ use std::{
 use anyhow::Result;
 use futures::StreamExt;
 use log::{error, info, warn};
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::{
+    sync::mpsc::{Receiver, Sender},
+    task::JoinHandle,
+};
 use zbus::zvariant::{ObjectPath, OwnedObjectPath};
 
 use crate::{
@@ -339,6 +342,65 @@ impl App {
         Ok(())
     }
 
+    async fn setup_primary_connection_listener(&self) -> JoinHandle<()> {
+        let app = self.clone();
+        tokio::spawn(async move {
+            let primary_connection = app.network_manager.primary_connection().await.unwrap();
+            primary_connection
+                .listening_to_state_changes(async |_| {
+                    app.send_event(Event::Update).await;
+                })
+                .await
+                .unwrap();
+        })
+    }
+
+    async fn setup_access_points_listener(&self) -> JoinHandle<()> {
+        let app = self.clone();
+        tokio::spawn(async move {
+            let mut device = None;
+
+            for d in app.network_manager.all_devices().await.unwrap() {
+                let device_type = d.device_type().await.unwrap();
+                let state = d.state().await.unwrap();
+                if device_type == DeviceType::Wifi && state == DeviceState::Activated {
+                    device = Some(d);
+                    break;
+                }
+            }
+
+            let wireless_device = match device {
+                Some(device) => match device.to_specific_device().await {
+                    Some(SpecificDevice::Wireless(device)) => device,
+                    _ => {
+                        error!("Could not downcast device to Wireless device");
+                        return;
+                    }
+                },
+                None => {
+                    error!("Could not find an active Wifi device");
+                    return;
+                }
+            };
+
+            wireless_device
+                .listening_to_access_point_added(async |_access_point| {
+                    info!("Access Point added");
+                    app.send_event(Event::Update).await;
+                })
+                .await
+                .unwrap();
+
+            wireless_device
+                .listening_to_access_point_removed(async |_access_point| {
+                    info!("Access Point removed");
+                    app.send_event(Event::Update).await;
+                })
+                .await
+                .unwrap();
+        })
+    }
+
     pub async fn run(
         &self,
         mut event_rx: Receiver<Event>,
@@ -386,6 +448,8 @@ impl App {
                 .unwrap();
         });
 
+        let mut access_points_handle = self.setup_access_points_listener().await;
+
         let app = self.clone();
         tokio::spawn(async move {
             while let Some(action) = action_rx.recv().await {
@@ -419,7 +483,7 @@ impl App {
         });
 
         while let Some(event) = event_rx.recv().await {
-            let app = self.clone();
+            let main_app = self.clone();
             match event {
                 Event::Init => {
                     if let ControlFlow::Break(_) = self.update(&mut tray_manager).await {
@@ -429,6 +493,7 @@ impl App {
                     continue;
                 }
                 Event::Update => {
+                    let app = main_app.clone();
                     primary_connection_handle.abort();
                     primary_connection_handle = tokio::spawn(async move {
                         let primary_connection =
@@ -440,6 +505,9 @@ impl App {
                             .await
                             .unwrap();
                     });
+
+                    access_points_handle.abort();
+                    access_points_handle = self.setup_access_points_listener().await;
 
                     if let ControlFlow::Break(_) = self.update(&mut tray_manager).await {
                         break;
