@@ -226,6 +226,15 @@ impl ksni::Tray for NetworkTray {
                 .into(),
                 MenuItem::Separator,
                 StandardItem {
+                    label: "Scan of Networks".into(),
+                    activate: Box::new(move |this: &mut Self| {
+                        this.app.send_action_blocking(Action::RequestScan);
+                    }),
+                    ..Default::default()
+                }
+                .into(),
+                MenuItem::Separator,
+                StandardItem {
                     label: available_connections_label.into(),
                     enabled: false,
                     ..Default::default()

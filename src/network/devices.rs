@@ -1,4 +1,6 @@
-use zbus::Result;
+use std::collections::HashMap;
+
+use zbus::{Result, zvariant::Value};
 
 use crate::interfaces::{access_point::AccessPointProxy, devices::wireless::WirelessProxy};
 
@@ -34,6 +36,10 @@ impl Wireless {
             out.push(AccessPoint::new(ap));
         }
         Ok(out)
+    }
+
+    pub async fn request_scan(&self, opts: HashMap<&str, &Value<'static>>) -> Result<()> {
+        self.wireless_device.request_scan(opts).await
     }
 }
 //

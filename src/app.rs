@@ -1,4 +1,9 @@
-use std::{cmp::Ordering, collections::HashSet, ops::ControlFlow, time::Duration};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    ops::ControlFlow,
+    time::Duration,
+};
 
 use anyhow::Result;
 use futures::StreamExt;
@@ -33,6 +38,7 @@ pub enum Action {
     ToggleWired,
     ToggleAirplaneMode,
     ToggleVPN(String),
+    RequestScan,
 }
 
 #[derive(Debug, Clone)]
@@ -306,6 +312,33 @@ impl App {
         Ok(())
     }
 
+    pub async fn request_scan(&self) -> Result<()> {
+        let mut device = None;
+
+        for d in self.network_manager.all_devices().await.unwrap() {
+            let device_type = d.device_type().await.unwrap();
+            let state = d.state().await.unwrap();
+            if device_type == DeviceType::Wifi && state == DeviceState::Activated {
+                device = Some(d);
+                break;
+            }
+        }
+
+        let wireless_device = match device {
+            Some(device) => match device.to_specific_device().await {
+                Some(SpecificDevice::Wireless(device)) => device,
+                _ => anyhow::bail!("Device is not a Wifi device"),
+            },
+            None => anyhow::bail!("Device is not a Wifi device"),
+        };
+
+        let opts = HashMap::new();
+
+        wireless_device.request_scan(opts).await?;
+
+        Ok(())
+    }
+
     pub async fn run(
         &self,
         mut event_rx: Receiver<Event>,
@@ -373,6 +406,11 @@ impl App {
                     }
                     Action::ToggleVPN(vpn) => {
                         app.toggle_vpn(vpn).await;
+                    }
+                    Action::RequestScan => {
+                        if let Err(e) = app.request_scan().await {
+                            error!("Failed to request scan: {}", e);
+                        };
                     }
                 }
             }
