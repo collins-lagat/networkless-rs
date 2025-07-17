@@ -226,7 +226,7 @@ impl ksni::Tray for NetworkTray {
                 .into(),
                 MenuItem::Separator,
                 StandardItem {
-                    label: "Scan of Networks".into(),
+                    label: "Scan for Networks".into(),
                     activate: Box::new(move |this: &mut Self| {
                         this.app.send_action_blocking(Action::RequestScan);
                     }),
