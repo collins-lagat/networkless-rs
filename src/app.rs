@@ -437,16 +437,7 @@ impl App {
                 .unwrap();
         });
 
-        let app = self.clone();
-        let mut primary_connection_handle = tokio::spawn(async move {
-            let primary_connection = app.network_manager.primary_connection().await.unwrap();
-            primary_connection
-                .listening_to_state_changes(async |_| {
-                    app.send_event(Event::Update).await;
-                })
-                .await
-                .unwrap();
-        });
+        let mut primary_connection_handle = self.setup_primary_connection_listener().await;
 
         let mut access_points_handle = self.setup_access_points_listener().await;
 
@@ -483,7 +474,6 @@ impl App {
         });
 
         while let Some(event) = event_rx.recv().await {
-            let main_app = self.clone();
             match event {
                 Event::Init => {
                     if let ControlFlow::Break(_) = self.update(&mut tray_manager).await {
@@ -493,18 +483,8 @@ impl App {
                     continue;
                 }
                 Event::Update => {
-                    let app = main_app.clone();
                     primary_connection_handle.abort();
-                    primary_connection_handle = tokio::spawn(async move {
-                        let primary_connection =
-                            app.network_manager.primary_connection().await.unwrap();
-                        primary_connection
-                            .listening_to_state_changes(async |_| {
-                                app.send_event(Event::Update).await;
-                            })
-                            .await
-                            .unwrap();
-                    });
+                    primary_connection_handle = self.setup_primary_connection_listener().await;
 
                     access_points_handle.abort();
                     access_points_handle = self.setup_access_points_listener().await;
