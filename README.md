@@ -2,6 +2,8 @@
 
 A simple network manager applet for Linux.
 
+![networkless-demo](https://github.com/user-attachments/assets/d2eef30f-8acf-4b3e-beb3-78268136c36a)
+
 ## Requirements
 
 - `networkmanager`
