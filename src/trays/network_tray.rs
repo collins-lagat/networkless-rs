@@ -24,6 +24,7 @@ pub enum Icon {
 pub struct WifiConnection {
     pub ssid: String,
     pub hw_address: String,
+    pub strength: u8,
 }
 
 #[derive(Debug, Clone)]

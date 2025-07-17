@@ -1,4 +1,4 @@
-use std::{ops::ControlFlow, time::Duration};
+use std::{cmp::Ordering, collections::HashSet, ops::ControlFlow, time::Duration};
 
 use anyhow::Result;
 use futures::StreamExt;
@@ -602,42 +602,61 @@ impl App {
                                 .iter()
                                 .map(|setting| async { setting.id().await.unwrap() });
 
-                            let ssids_of_known_connections =
-                                futures::future::join_all(futures).await;
+                            let ssids_of_known_connections = HashSet::<String>::from_iter(
+                                futures::future::join_all(futures).await,
+                            );
 
                             let mut access_points = wireless_device.access_points().await.unwrap();
                             let futures = access_points.iter_mut().map(|ap| async {
                                 WifiConnection {
                                     ssid: ap.id().await.unwrap().into(),
                                     hw_address: ap.hw_address().await.unwrap(),
+                                    strength: ap.strength().await.unwrap(),
                                 }
                             });
-                            let available_connections = futures::future::join_all(futures).await;
-                            // TODO: sort access points by:
-                            // 1. known connections
-                            // 2. strength
-                            // 3. name alphabetically
+                            let mut available_connections =
+                                futures::future::join_all(futures).await;
 
                             let known_connections = ssids_of_known_connections
-                                .into_iter()
+                                .iter()
                                 .map(|ssid| {
                                     match available_connections
                                         .iter()
-                                        .find(|connection| connection.ssid == ssid)
+                                        .find(|connection| *connection.ssid == *ssid)
                                     {
                                         Some(connection) => connection.clone(),
                                         None => WifiConnection {
-                                            ssid,
+                                            ssid: ssid.clone(),
                                             hw_address: "".into(),
+                                            strength: 0,
                                         },
                                     }
                                 })
-                                .collect::<Vec<WifiConnection>>();
+                                .collect::<Vec<WifiConnection>>()
+                                .clone();
 
                             let known_connections = known_connections
+                                .clone()
                                 .into_iter()
                                 .filter(|connection| !connection.hw_address.is_empty())
                                 .collect::<Vec<WifiConnection>>();
+
+                            available_connections.sort_by(|a, b| {
+                                let is_known = ssids_of_known_connections
+                                    .contains(&b.ssid)
+                                    .cmp(&ssids_of_known_connections.contains(&a.ssid));
+                                if is_known != Ordering::Equal {
+                                    return is_known;
+                                }
+
+                                let is_stronger = b.strength.cmp(&a.strength);
+
+                                if is_stronger != Ordering::Equal {
+                                    return is_stronger;
+                                }
+
+                                a.ssid.to_lowercase().cmp(&b.ssid.to_lowercase())
+                            });
 
                             tray_manager
                                 .update(TrayUpdate::Wireless(Some(WifiState {
