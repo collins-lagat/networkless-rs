@@ -39,10 +39,6 @@ impl Device {
         self.device.device_type().await.map(DeviceType::from)
     }
 
-    pub async fn disconnect(&self) -> Result<()> {
-        self.device.disconnect().await
-    }
-
     pub fn path(&self) -> ObjectPath<'static> {
         self.device.inner().path().clone()
     }
@@ -78,17 +74,6 @@ impl Device {
         Ok(out)
     }
 
-    // pub async fn with_connection_and_path<'a, F, Fut, R>(&'a self, f: F) -> Option<R>
-    // where
-    //     F: FnOnce(&'a Connection, ObjectPath<'a>) -> Fut,
-    //     Fut: Future<Output = R> + 'a,
-    // {
-    //     let connection = self.device.inner().connection();
-    //     let path = self.device.inner().path().clone();
-    //     let r = f(connection, path).await;
-    //     Some(r)
-    // }
-
     pub async fn to_specific_device(&self) -> Option<SpecificDevice> {
         let device_type = match self.device_type().await {
             Ok(device_type) => device_type,
@@ -108,30 +93,8 @@ impl Device {
                 let device = Wireless::new(wireless_device).await;
                 Some(SpecificDevice::Wireless(device))
             }
-            DeviceType::Ethernet => {
-                // let connection = self.device.inner().connection();
-                // let path = self.device.inner().path().clone();
-                // let wired_device = WiredProxy::builder(connection)
-                //     .path(path)
-                //     .unwrap()
-                //     .build()
-                //     .await
-                //     .unwrap();
-                // Some(SpecificDevice::Wired(wired_device))
-                Some(SpecificDevice::Wired(()))
-            }
-            DeviceType::WireGuard => {
-                // let connection = self.device.inner().connection();
-                // let path = self.device.inner().path().clone();
-                // let wire_guard_device = WireGuardProxy::builder(connection)
-                //     .path(path)
-                //     .unwrap()
-                //     .build()
-                //     .await
-                //     .unwrap();
-                // Some(SpecificDevice::WireGuard(wire_guard_device))
-                Some(SpecificDevice::WireGuard(()))
-            }
+            DeviceType::Ethernet => Some(SpecificDevice::Wired(())),
+            DeviceType::WireGuard => Some(SpecificDevice::WireGuard(())),
             _ => None,
         }
     }

@@ -103,33 +103,9 @@ impl Wireless {
         Ok(())
     }
 }
-//
-// #[derive(Debug, Clone)]
-// pub struct Wired {
-//     wired_device: WiredProxy<'static>,
-// }
-//
-// impl Wired {
-//     pub async fn new(wired_device: WiredProxy<'static>) -> Self {
-//         Self { wired_device }
-//     }
-// }
-//
-// #[derive(Debug, Clone)]
-// pub struct WireGuard {
-//     wire_guard_device: WireGuardProxy<'static>,
-// }
-//
-// impl WireGuard {
-//     pub async fn new(wire_guard_device: WireGuardProxy<'static>) -> Self {
-//         Self { wire_guard_device }
-//     }
-// }
 
 pub enum SpecificDevice {
     Wireless(Wireless),
-    // Wired(Wired),
-    // WireGuard(WireGuard),
     Wired(()),
     WireGuard(()),
 }

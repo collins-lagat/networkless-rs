@@ -23,17 +23,6 @@ impl ConnectionSetting {
         }
     }
 
-    // pub async fn uuid(&self) -> Result<String> {
-    //     let settings = self.settings.get_settings().await?;
-    //     if let Some(connection) = settings.get("connection") {
-    //         let uuid = connection.get("uuid").unwrap().to_owned();
-    //         let uuid = String::try_from(uuid).unwrap();
-    //         Ok(uuid)
-    //     } else {
-    //         anyhow::bail!("No uuid found")
-    //     }
-    // }
-
     pub fn path(&self) -> ObjectPath<'static> {
         self.settings.inner().path().clone()
     }

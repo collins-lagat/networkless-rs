@@ -1,7 +1,6 @@
 use anyhow::Result;
 use anyhow::bail;
 use futures::StreamExt;
-use log::error;
 use log::info;
 use tokio::process::Command;
 use zbus::Connection;
@@ -190,24 +189,6 @@ impl NetworkManager {
         Ok(out)
     }
 
-    // pub async fn primary_connection_type(&self) -> ZbusResult<DeviceType> {
-    //     self.nm
-    //         .primary_connection_type()
-    //         .await
-    //         .map(DeviceType::from)
-    // }
-
-    pub async fn check_connectivity(&self) -> Result<NmConnectivityState> {
-        let connectivity = self.nm.check_connectivity().await?;
-        let connectivity = NmConnectivityState::from(connectivity);
-        Ok(connectivity)
-    }
-
-    pub async fn reload(&self) -> Result<()> {
-        self.nm.reload(0).await?;
-        Ok(())
-    }
-
     pub async fn activate_connection(
         &self,
         active_connection: zbus::zvariant::OwnedObjectPath,
@@ -262,18 +243,6 @@ impl NetworkManager {
         } else {
             Ok(false)
         }
-    }
-
-    pub async fn with_connection<'a, F, Fut, R>(&'a self, f: F) -> Option<R>
-    where
-        F: FnOnce(&'a Connection) -> Fut,
-        Fut: Future<Output = R> + 'a,
-    {
-        let connection = &self.connection;
-
-        let r = f(connection).await;
-
-        Some(r)
     }
 
     pub async fn set_airplane_mode_enabled(&self, on: bool) -> Result<()> {
