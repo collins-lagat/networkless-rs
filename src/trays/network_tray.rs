@@ -25,6 +25,7 @@ pub struct WifiConnection {
     pub ssid: String,
     pub hw_address: String,
     pub strength: u8,
+    pub secure: bool,
 }
 
 #[derive(Debug, Clone)]

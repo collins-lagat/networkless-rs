@@ -1,5 +1,7 @@
 // From: https://github.com/pop-os/dbus-settings-bindings/blob/3b86984332be2c930a3536ab714b843c851fa8ca/networkmanager/src/interface/enums.rs
 
+use bitflags::bitflags;
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NmState {
     Asleep,
@@ -153,5 +155,35 @@ impl From<u32> for ActiveConnectionState {
             4 => ActiveConnectionState::Deactivated,
             _ => ActiveConnectionState::Unknown,
         }
+    }
+}
+
+bitflags! {
+    pub struct ApFlags: u32 {
+        const NONE = 0x0;
+        const PRIVACY = 0x1;
+        const WPS = 0x2;
+        const WPS_PBC = 0x4;
+        const WPS_PIN = 0x8;
+    }
+}
+
+bitflags! {
+    pub struct ApSecurityFlags: u32 {
+        const NONE = 0x0;
+        const WEP40 = 0x1;
+        const WEP104 = 0x2;
+        const TKIP = 0x4;
+        const CCMP = 0x8;
+        const GROUP_WEP40 = 0x10;
+        const GROUP_WEP104 = 0x20;
+        const GROUP_TKIP = 0x40;
+        const GROUP_CCMP = 0x80;
+        const KEY_MGMTPSK = 0x100;
+        const KEY_MGMT_802_1X = 0x200;
+        const KEY_MGMT_SAE = 0x400;
+        const KEY_MGMT_OWE = 0x800;
+        const KEY_MGMT_OWE_TM = 0x1000;
+        const KEY_MGMT_EAP_SUITE_B_192 = 0x2000;
     }
 }

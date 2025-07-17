@@ -484,6 +484,7 @@ name = "networkless-rs"
 version = "0.4.6"
 dependencies = [
  "anyhow",
+ "bitflags 2.9.1",
  "fs2",
  "futures",
  "image",
