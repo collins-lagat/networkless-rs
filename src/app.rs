@@ -1,5 +1,6 @@
 use std::{ops::ControlFlow, time::Duration};
 
+use anyhow::Result;
 use futures::StreamExt;
 use log::{error, info, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -198,18 +199,111 @@ impl App {
         }
     }
 
-    pub async fn change_access_point(&self, access_point: WifiConnection) {
-        info!("Changing access point to {:?}", access_point);
+    pub async fn change_access_point(&self, access_point: WifiConnection) -> Result<()> {
+        let mut device = None;
 
-        // TODO: check if the access point is already known
+        for d in self.network_manager.all_devices().await.unwrap() {
+            let device_type = d.device_type().await.unwrap();
+            let state = d.state().await.unwrap();
+            if device_type == DeviceType::Wifi && state == DeviceState::Activated {
+                device = Some(d);
+                break;
+            }
+        }
 
-        // TODO: deactivate other wireless connections
+        let device = match device {
+            Some(device) => device,
+            None => {
+                anyhow::bail!("No active Wifi device found");
+            }
+        };
 
-        // TODO: connect to the access point using NetworkManager
-        // activate_connection(conn, device, access_point_path);
+        let wireless_device = match device.to_specific_device().await {
+            Some(SpecificDevice::Wireless(device)) => device,
+            _ => anyhow::bail!("Device is not a Wifi device"),
+        };
 
-        // TODO: wait for the active connection state to change from
-        // whatever it is to Activated
+        let mut access_points = wireless_device.access_points().await.unwrap_or_default();
+
+        let mut is_associated_active_connection_already_active = false;
+
+        for c in self
+            .network_manager
+            .active_connections()
+            .await
+            .unwrap_or_default()
+        {
+            for ap in &mut access_points {
+                if ap.id().await.unwrap() == c.id().await.unwrap()
+                    && ap.hw_address().await.unwrap_or_default() == access_point.hw_address
+                    && c.state().await.unwrap() == ActiveConnectionState::Activated
+                {
+                    is_associated_active_connection_already_active = true;
+                    break;
+                }
+            }
+
+            if is_associated_active_connection_already_active {
+                break;
+            }
+        }
+
+        if is_associated_active_connection_already_active {
+            warn!("Associated active connection is already active");
+            return Ok(());
+        }
+
+        let mut found_access_point = None;
+        for ap in &mut access_points {
+            if ap.id().await.unwrap() == access_point.ssid
+                && ap.hw_address().await.unwrap() == access_point.hw_address
+            {
+                found_access_point = Some(ap);
+                break;
+            }
+        }
+
+        let found_access_point = match found_access_point {
+            Some(found_access_point) => found_access_point,
+            None => {
+                anyhow::bail!("Access point not found");
+            }
+        };
+
+        let configured_connections = device.available_connections().await.unwrap_or_default();
+
+        let mut configured_connection = None;
+
+        for conf in &configured_connections {
+            if conf.id().await.unwrap() == found_access_point.id().await.unwrap() {
+                configured_connection = Some(conf);
+                break;
+            }
+        }
+
+        let configured_connection = match configured_connection {
+            Some(configured_connection) => configured_connection,
+            None => {
+                anyhow::bail!("Configured connection not found");
+            }
+        };
+
+        let configured_connection_path = OwnedObjectPath::from(configured_connection.path());
+        let device_path = OwnedObjectPath::from(device.path());
+        let access_point_path = OwnedObjectPath::from(found_access_point.path());
+
+        info!(
+            "configured_connection_path {:?}",
+            configured_connection_path
+        );
+        info!("device_path {:?}", device_path);
+        info!("access_point_path {:?}", access_point_path);
+
+        self.network_manager
+            .activate_connection(configured_connection_path, device_path, access_point_path)
+            .await?;
+
+        Ok(())
     }
 
     pub async fn run(
@@ -264,7 +358,9 @@ impl App {
             while let Some(action) = action_rx.recv().await {
                 match action {
                     Action::ChangeAccessPoint(access_point) => {
-                        app.change_access_point(access_point).await;
+                        if let Err(e) = app.change_access_point(access_point).await {
+                            error!("Failed to change access point: {}", e);
+                        };
                     }
                     Action::ToggleWifi => {
                         app.toggle_wifi().await;

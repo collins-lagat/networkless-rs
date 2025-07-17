@@ -1,4 +1,4 @@
-use zbus::Result;
+use zbus::{Result, zvariant::ObjectPath};
 
 use crate::interfaces::access_point::AccessPointProxy;
 
@@ -36,5 +36,9 @@ impl AccessPoint {
 
     pub async fn strength(&self) -> Result<u8> {
         self.access_point.strength().await
+    }
+
+    pub fn path(&self) -> ObjectPath<'static> {
+        self.access_point.inner().path().clone()
     }
 }
