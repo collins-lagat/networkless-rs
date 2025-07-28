@@ -584,6 +584,7 @@ impl App {
                 tray_manager.update(TrayUpdate::Icon(Icon::Limited)).await;
                 let app = self.clone();
                 tokio::spawn(async move {
+                    app.network_manager.check_connectivity().await.unwrap();
                     tokio::time::sleep(Duration::from_secs(5)).await;
                     app.send_event(Event::Update).await;
                 });

@@ -113,6 +113,13 @@ impl NetworkManager {
         Ok(())
     }
 
+    pub async fn check_connectivity(&self) -> ZbusResult<NmConnectivityState> {
+        self.nm
+            .check_connectivity()
+            .await
+            .map(NmConnectivityState::from)
+    }
+
     pub async fn devices(&self) -> Result<Vec<Device>> {
         let devices = self.nm.get_devices().await?;
 
