@@ -584,9 +584,32 @@ impl App {
                 tray_manager.update(TrayUpdate::Icon(Icon::Limited)).await;
                 let app = self.clone();
                 tokio::spawn(async move {
-                    app.network_manager.check_connectivity().await.unwrap();
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                    app.send_event(Event::Update).await;
+                    let mut retry_count = 0u32;
+
+                    loop {
+                        let status = match app.network_manager.check_connectivity().await {
+                            Ok(status) => status,
+                            Err(e) => {
+                                error!("Failed to check connectivity: {}", e);
+                                return;
+                            }
+                        };
+
+                        if matches!(status, NmConnectivityState::Full) {
+                            app.send_event(Event::Update).await;
+                            break;
+                        }
+
+                        if retry_count >= 16 {
+                            break;
+                        }
+
+                        retry_count = retry_count.saturating_add(1);
+                        _ = tokio::time::sleep(Duration::from_millis(
+                            2_u64.saturating_pow(retry_count).min(65_536),
+                        ))
+                        .await;
+                    }
                 });
             }
             NmConnectivityState::Full => {}
